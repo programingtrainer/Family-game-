@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FamilyGame | حساب جديد</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <div class="welcome-container animate-in">
+        <h2 class="logo">حساب جديد</h2>
+        <p>سجل بياناتك وانضم لعائلة اللعبة</p>
+
+        <form action="/signup" method="POST" class="auth-form" id="signupForm">
+            <div class="input-group">
+                <i class="fas fa-user icon"></i>
+                <input type="text" name="username" placeholder="اسم المستخدم" required>
+            </div>
+
+            <div class="input-group">
+                <i class="fas fa-lock icon"></i>
+                <input type="password" id="password" name="password" placeholder="كلمة السر" required>
+                <i class="fas fa-eye-slash toggle-password" onclick="togglePass('password', this)"></i>
+            </div>
+
+            <div class="input-group">
+                <i class="fas fa-check-double icon"></i>
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="تأكيد كلمة السر" required>
+                <i class="fas fa-eye-slash toggle-password" onclick="togglePass('confirm_password', this)"></i>
+            </div>
+
+            <button type="submit" class="btn btn-login" style="width: 100%; border: none;">إنشاء الحساب</button>
+        </form>
+
+        <a href="/" class="logout-link" style="display: block; margin-top: 15px;">العودة للرئيسية</a>
+    </div>
+
+    <script>
+        // دالة موحدة لتشغيل العين لأي خانة
+        function togglePass(id, el) {
+            const input = document.getElementById(id);
+            if (input.type === "password") {
+                input.type = "text";
+                el.classList.replace('fa-eye-slash', 'fa-eye');
+            } else {
+                input.type = "password";
+                el.classList.replace('fa-eye', 'fa-eye-slash');
+            }
+        }
+
+        // منع الإرسال لو الباسورد مش متطابق (حماية إضافية في المتصفح)
+        document.getElementById('signupForm').onsubmit = function() {
+            if (document.getElementById('password').value !== document.getElementById('confirm_password').value) {
+                alert("كلمات السر غير متطابقة!");
+                return false;
+            }
+            return true;
+        };
+    </script>
+</body>
+</html>

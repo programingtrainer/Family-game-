@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FamilyGame | تسجيل الدخول</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <div class="welcome-container animate-in">
+        <h2 class="logo" style="font-size: 2.5rem;">دخول اللاعبين</h2>
+
+        <form action="/login" method="POST" class="auth-form">
+
+            {% if error %}
+            <p style="color: #ff7675; font-size: 0.9rem; background: rgba(255,118,117,0.1); padding: 10px; border-radius: 10px; border: 1px solid #ff7675;">
+                <i class="fas fa-exclamation-circle"></i> {{ error }}
+            </p>
+            {% endif %}
+
+            <div class="input-group">
+                <i class="fas fa-user icon"></i>
+                <input type="text" name="username" placeholder="اسم المستخدم" required>
+            </div>
+
+            <div class="input-group">
+                <i class="fas fa-lock icon"></i>
+                <input type="password" id="password" name="password" placeholder="كلمة السر" required>
+                <i class="fas fa-eye-slash toggle-password" id="togglePassword"></i>
+            </div>
+
+            <div class="captcha-box">
+                <label>أثبت أنك لست روبوت: ما هو {{ num1 }} + {{ num2 }}؟</label>
+                <input type="number" name="captcha_answer" placeholder="الإجابة" required>
+            </div>
+
+            <button type="submit" class="btn btn-login" style="width: 100%; border: none;">دخول</button>
+        </form>
+
+        <div style="margin-top: 20px;">
+            <p>ليس لديك حساب؟ <a href="/signup" style="color: var(--accent-color); text-decoration: none; font-weight: bold;">سجل الآن</a></p>
+        </div>
+    </div>
+
+    <script>
+        // كود زر العين
+        const togglePassword = document.querySelector('#togglePassword');
+        const password = document.querySelector('#password');
+
+        togglePassword.addEventListener('click', function () {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+        });
+    </script>
+</body>
+</html>

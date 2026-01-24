@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>FamilyGame | الأصدقاء</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="dashboard-container" style="max-width: 500px;">
+        <h2 class="logo" style="font-size: 2rem;">قائمة الأصدقاء</h2>
+
+        <form action="/friends" method="POST" class="auth-form" style="margin-bottom: 20px;">
+            <div class="input-group">
+                <i class="fas fa-search icon"></i>
+                <input type="text" name="search_query" placeholder="ابحث عن اسم صديق..." required>
+            </div>
+            <button type="submit" class="btn btn-secondary" style="width: 100%; border:none; background: var(--primary-color); color:white;">بحث</button>
+        </form>
+
+        {% if results %}
+        <div class="results-box" style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px;">
+            <p style="font-size: 0.8rem;">نتائج البحث:</p>
+            {% for user in results %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <span>{{ user.username }}</span>
+                <a href="/add_friend/{{ user.id }}" class="btn btn-primary" style="padding: 5px 10px; font-size: 0.7rem;">إضافة</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <hr style="margin: 20px 0; opacity: 0.2;">
+
+        <div class="friends-list">
+            <h4 style="margin-bottom: 10px;"><i class="fas fa-user-friends"></i> أصدقائي</h4>
+            {% if my_friends %}
+                {% for friend in my_friends %}
+                <div class="stat-card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px;">
+                    <span>{{ friend.username }}</span>
+                    <a href="/play_with/{{ friend.id }}" class="btn btn-primary" style="padding: 5px 10px; font-size: 0.7rem; background: var(--success);">تحدي</a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="font-size: 0.9rem; opacity: 0.7;">لم تضف أصدقاء بعد.</p>
+            {% endif %}
+        </div>
+
+        <a href="/dashboard" class="logout-link" style="display: block; margin-top: 20px;">العودة للرئيسية</a>
+    </div>
+</body>
+</html>

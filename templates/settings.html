@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>FamilyGame | الإعدادات</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container animate-in">
+        <h2 class="logo"><i class="fas fa-user-cog"></i> الإعدادات</h2>
+
+        <div class="settings-list" style="margin-top: 20px;">
+
+                <h4 style="color: #a29bfe; margin-bottom: 10px;"><i class="fas fa-key"></i> تحديث كلمة المرور</h4>
+                <form action="/change_password" method="POST" class="auth-form" style="padding: 0;">
+
+                    <div class="input-group" style="position: relative; margin-bottom: 10px;">
+                        <input type="password" id="new_password" name="new_password" placeholder="كلمة المرور الجديدة" required 
+                               style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px;">
+                        <i class="fas fa-eye-slash toggle-password" id="toggleNewPassword" 
+                           style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.5);"></i>
+                    </div>
+
+                    <button type="submit" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem; padding: 10px;">تحديث</button>
+                </form>
+            </div>
+
+            <hr style="opacity: 0.1; margin: 20px 0;">
+
+            <a href="/logout" style="text-decoration: none; display: block; margin-bottom: 15px;">
+                <div class="stat-card" style="border: 1px solid rgba(255,255,255,0.1); padding: 15px;">
+                    <p style="margin: 0; display: flex; justify-content: space-between; align-items: center;">
+                        <span>تسجيل الخروج</span>
+                        <i class="fas fa-sign-out-alt"></i>
+                    </p>
+                </div>
+            </a>
+
+            <a href="javascript:void(0)" onclick="confirmDelete()" style="text-decoration: none;">
+                <div class="stat-card" style="border: 1px solid #ff7675; background: rgba(255, 118, 117, 0.1) !important;">
+                    <p style="color: #ff7675; margin: 0; display: flex; justify-content: space-between; align-items: center;">
+                        <span>حذف الحساب نهائياً</span>
+                        <i class="fas fa-trash-alt"></i>
+                    </p>
+                </div>
+            </a>
+        </div>
+
+    <script>
+    function confirmDelete() {
+        if (confirm("هل أنت متأكد من حذف حسابك نهائياً؟ لا يمكن التراجع عن هذا الإجراء!")) {
+            window.location.href = "/delete_account";
+        }
+    }
+    </script>
+
+        <script>
+            const toggleNewPassword = document.querySelector('#toggleNewPassword');
+            const newPasswordInput = document.querySelector('#new_password');
+
+            toggleNewPassword.addEventListener('click', function () {
+                // تبديل نوع الإدخال بين password و text
+                const type = newPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                newPasswordInput.setAttribute('type', type);
+
+                // تبديل شكل الأيقونة
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            });
+        </script>
+        
+        <a href="/dashboard" class="logout-link" style="display: block; margin-top: 20px;">العودة للرئيسية</a>
+    </div>
+</body>
+</html>

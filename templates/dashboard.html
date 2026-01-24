@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>FamilyGame | اللوحة الرئيسية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="dashboard-container animate-in">
+        <div class="user-bar">
+            <a href="/settings" class="settings-btn" title="الإعدادات">
+                <i class="fas fa-cog"></i>
+            </a>
+
+            <div class="user-info">
+                <span>كابتن: {{ session['username'] }}</span>
+            </div>
+        </div>
+
+        <h1 class="logo" style="font-size: 3rem;">FamilyGame</h1>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="fas fa-star" style="color: gold;"></i>
+                <p>نقاطك</p>
+                <h3>0</h3>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-fire" style="color: #ff7675;"></i>
+                <p>المستوى</p>
+                <h3>مبتدئ</h3>
+            </div>
+        </div>
+
+        <div class="quick-tips" style="margin-top: 30px; font-size: 0.8rem; color: #a29bfe; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+            <p><i class="fas fa-lightbulb"></i> نصيحة: السرعة أهم من كتر الكتابة، ركز في الحرف!</p>
+        </div>
+        <div class="action-buttons">
+            <a href="/play" class="btn btn-primary main-play-btn">
+                <i class="fas fa-play-circle"></i> العب الآن!
+            </a>
+            <div class="sub-buttons">
+                <a href="/friends" class="btn btn-secondary"><i class="fas fa-users"></i> الأصدقاء</a>
+                <a href="/leaderboard" class="btn btn-secondary"><i class="fas fa-award"></i> الأوائل</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
