@@ -11,66 +11,95 @@
         <h2 class="logo"><i class="fas fa-user-cog"></i> الإعدادات</h2>
 
         <div class="settings-list" style="margin-top: 20px;">
-
-                <h4 style="color: #a29bfe; margin-bottom: 10px;"><i class="fas fa-key"></i> تحديث كلمة المرور</h4>
-                <form action="/change_password" method="POST" class="auth-form" style="padding: 0;">
-
-                    <div class="input-group" style="position: relative; margin-bottom: 10px;">
-                        <input type="password" id="new_password" name="new_password" placeholder="كلمة المرور الجديدة" required 
-                               style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px;">
-                        <i class="fas fa-eye-slash toggle-password" id="toggleNewPassword" 
-                           style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.5);"></i>
-                    </div>
-
-                    <button type="submit" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem; padding: 10px;">تحديث</button>
-                </form>
+            <div style="margin: 15px auto; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); border-radius: 50%; border: 3px solid #a29bfe;">
+                <i class="fas fa-user-circle" style="font-size: 4rem; color: #a29bfe;"></i>
             </div>
 
-            <hr style="opacity: 0.1; margin: 20px 0;">
+            <h4 style="color: #a29bfe; margin-bottom: 15px;"><i class="fas fa-key"></i> تحديث كلمة المرور</h4>
+
+            {% if success %}
+            <div class="alert-success" style="background: linear-gradient(135deg, rgba(0, 184, 148, 0.2), rgba(0, 206, 201, 0.1)); border: 1px solid #00b894; color: #00b894; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; animation: slideIn 0.5s ease;">
+                <i class="fas fa-check-circle" style="font-size: 1.3rem;"></i>
+                <span>{{ success }}</span>
+            </div>
+            {% endif %}
+
+            {% if error %}
+            <div class="alert-error" style="background: linear-gradient(135deg, rgba(255, 118, 117, 0.2), rgba(255, 107, 107, 0.1)); border: 1px solid #ff7675; color: #ff7675; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; animation: shake 0.5s ease;">
+                <i class="fas fa-exclamation-circle" style="font-size: 1.3rem;"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <form action="/change_password" method="POST" class="auth-form" style="padding: 0;">
+                <div class="input-group" style="position: relative; margin-bottom: 10px;">
+                    <input type="password" id="new_password" name="new_password" placeholder="كلمة المرور الجديدة" required 
+                           style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px; padding-left: 45px;">
+                    <i class="fas fa-eye-slash toggle-password" id="toggleNewPassword" 
+                       style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.5);"></i>
+                </div>
+
+                <div class="input-group" style="position: relative; margin-bottom: 15px;">
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="تأكيد كلمة المرور" required 
+                           style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px; padding-left: 45px;">
+                    <i class="fas fa-eye-slash toggle-password" id="toggleConfirmPassword" 
+                       style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.5);"></i>
+                </div>
+
+                <button type="submit" class="btn btn-secondary" style="width: 100%; font-size: 0.9rem; padding: 12px; background: #6c5ce7; border: none; color: white; border-radius: 10px; cursor: pointer;">تحديث كلمة المرور</button>
+            </form>
+
+            <hr style="opacity: 0.1; margin: 25px 0;">
 
             <a href="/logout" style="text-decoration: none; display: block; margin-bottom: 15px;">
-                <div class="stat-card" style="border: 1px solid rgba(255,255,255,0.1); padding: 15px;">
-                    <p style="margin: 0; display: flex; justify-content: space-between; align-items: center;">
+                <div class="stat-card" style="border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; background: rgba(255,255,255,0.02);">
+                    <p style="margin: 0; display: flex; justify-content: space-between; align-items: center; color: white;">
                         <span>تسجيل الخروج</span>
                         <i class="fas fa-sign-out-alt"></i>
                     </p>
                 </div>
             </a>
 
-            <a href="javascript:void(0)" onclick="confirmDelete()" style="text-decoration: none;">
-                <div class="stat-card" style="border: 1px solid #ff7675; background: rgba(255, 118, 117, 0.1) !important;">
+            <a href="javascript:void(0)" onclick="confirmDelete()" style="text-decoration: none; display: block; margin-bottom: 25px;">
+                <div class="stat-card" style="border: 1px solid #ff7675; background: rgba(255, 118, 117, 0.1); padding: 15px; border-radius: 10px;">
                     <p style="color: #ff7675; margin: 0; display: flex; justify-content: space-between; align-items: center;">
                         <span>حذف الحساب نهائياً</span>
                         <i class="fas fa-trash-alt"></i>
                     </p>
                 </div>
             </a>
+
+            <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); pt: 20px;">
+                <a href="/dashboard" class="back-link" style="color: #a29bfe; text-decoration: none; border: 1px solid #a29bfe; padding: 10px 25px; border-radius: 10px; display: inline-block; margin-top: 20px; transition: 0.3s;">
+                    <i class="fas fa-arrow-right"></i> العودة للرئيسية
+                </a>
+            </div>
         </div>
+    </div>
 
     <script>
+    // دالة حذف الحساب
     function confirmDelete() {
         if (confirm("هل أنت متأكد من حذف حسابك نهائياً؟ لا يمكن التراجع عن هذا الإجراء!")) {
             window.location.href = "/delete_account";
         }
     }
+
+    // دالة تشغيل العين (إظهار/إخفاء الباسورد)
+    function setupPasswordToggle(toggleId, inputId) {
+        const toggle = document.querySelector(toggleId);
+        const input = document.querySelector(inputId);
+
+        toggle.addEventListener('click', function () {
+            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+        });
+    }
+
+    setupPasswordToggle('#toggleNewPassword', '#new_password');
+    setupPasswordToggle('#toggleConfirmPassword', '#confirm_password');
     </script>
-
-        <script>
-            const toggleNewPassword = document.querySelector('#toggleNewPassword');
-            const newPasswordInput = document.querySelector('#new_password');
-
-            toggleNewPassword.addEventListener('click', function () {
-                // تبديل نوع الإدخال بين password و text
-                const type = newPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                newPasswordInput.setAttribute('type', type);
-
-                // تبديل شكل الأيقونة
-                this.classList.toggle('fa-eye');
-                this.classList.toggle('fa-eye-slash');
-            });
-        </script>
-        
-        <a href="/dashboard" class="logout-link" style="display: block; margin-top: 20px;">العودة للرئيسية</a>
-    </div>
 </body>
 </html>

@@ -116,8 +116,19 @@ def login():
     if request.method == 'POST':
         user_name = request.form.get('username')
         pass_word = request.form.get('password')
+        # الحصول على إجابة المستخدم من الحقل اللي في الـ HTML
+        user_captcha = request.form.get('captcha_answer')
+        # الحصول على الإجابة الصحيحة من الجلسة
+        correct_captcha = session.get('captcha_result')
 
-        # الطريقة الحديثة للبحث (تمنع الـ Ambiguous error)
+        # أول خطوة: التأكد من الكاباتشا
+        if not user_captcha or int(user_captcha) != correct_captcha:
+            # لو غلط، نولد أرقام جديدة ونرجع صفحة اللوجن مع رسالة خطأ
+            num1, num2 = random.randint(1, 10), random.randint(1, 10)
+            session['captcha_result'] = num1 + num2
+            return render_template('login.html', error="إجابة الكاباتشا غير صحيحة", num1=num1, num2=num2)
+
+        # ثاني خطوة: البحث عن المستخدم
         stmt = select(User).where(User.username == user_name, User.password == pass_word)
         user = db.session.execute(stmt).scalar_one_or_none()
 
@@ -126,9 +137,12 @@ def login():
             session['username'] = user.username
             return redirect(url_for('dashboard'))
         else:
-            return render_template('login.html', error="بيانات الدخول غير صحيحة")
+            # لو بيانات المستخدم غلط، نولد برضه كاباتشا جديدة للأمان
+            num1, num2 = random.randint(1, 10), random.randint(1, 10)
+            session['captcha_result'] = num1 + num2
+            return render_template('login.html', error="بيانات الدخول غير صحيحة", num1=num1, num2=num2)
 
-    # توليد أرقام الكاباتشا العشوائية
+    # في حالة الـ GET (أول مرة يفتح الصفحة)
     num1, num2 = random.randint(1, 10), random.randint(1, 10)
     session['captcha_result'] = num1 + num2
     return render_template('login.html', num1=num1, num2=num2)
@@ -152,18 +166,36 @@ def settings():
 
 @app.route('/change_password', methods=['POST'])
 def change_password():
+    # 1. التأكد من تسجيل الدخول
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
     new_pwd = request.form.get('new_password')
+    confirm_pwd = request.form.get('confirm_password')
+
+    # 2. جلب المستخدم والتأكد أنه ليس None
     user = db.session.get(User, session['user_id'])
 
-    if user and new_pwd:
-        user.password = new_pwd
-        db.session.commit()
-        # يمكن إضافة رسالة نجاح هنا
-    return redirect(url_for('settings'))
+    # لو السيرفر مش لاقي المستخدم، نرجعه لصفحة الدخول
+    if user is None:
+        return redirect(url_for('login'))
 
+    # 3. التحقق من تطابق الحقول
+    if not new_pwd or new_pwd.strip() == "":
+        return render_template('settings.html', error="كلمة المرور فارغة!", user=user)
+
+    if new_pwd != confirm_pwd:
+        return render_template('settings.html', error="كلمات المرور غير متطابقة!", user=user)
+
+    # 4. التحديث الفعلي (هنا اختفى خطأ الـ None)
+    try:
+        user.password = new_pwd  # الآن بايثون متأكد أن user ليس None
+        db.session.commit()
+        return render_template('settings.html', success="تم تغيير كلمة المرور بنجاح ✅", user=user)
+    except Exception as e:
+        db.session.rollback()
+        return render_template('settings.html', error="حدث خطأ في قاعدة البيانات", user=user)
+        
 @app.route('/delete_account')
 def delete_account():
     if 'user_id' not in session:

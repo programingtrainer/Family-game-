@@ -34,7 +34,13 @@
 
             <div class="captcha-box">
                 <label>أثبت أنك لست روبوت: ما هو {{ num1 }} + {{ num2 }}؟</label>
-                <input type="number" name="captcha_answer" placeholder="الإجابة" required>
+                <input type="number" 
+                       name="captcha_answer" 
+                       placeholder="اكتب الإجابة هنا" 
+                       required 
+                       inputmode="numeric" 
+                       pattern="[0-9]*" 
+                       style="width: 100%; padding: 10px; margin-bottom: 10px; text-align: center;">
             </div>
 
             <button type="submit" class="btn btn-login" style="width: 100%; border: none;">دخول</button>
