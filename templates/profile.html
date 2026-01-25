@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>بروفايل | {{ target.username }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container animate-in" style="max-width: 500px; text-align: center;">
+        <div class="user-bar">
+            <a href="/friends" class="settings-btn"><i class="fas fa-arrow-right"></i></a>
+            <span>بروفايل اللاعب</span>
+        </div>
+
+        <div style="margin-top: 30px; position: relative;">
+            <div style="position: relative; width: 100px; height: 100px; margin: 0 auto 20px;">
+                <div style="width: 100px; height: 100px; background: #6c5ce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    {{ target.username[0] | upper }}
+                </div>
+                <span style="position: absolute; bottom: 5px; right: 5px; height: 18px; width: 18px; border-radius: 50%; border: 3px solid #2f3542;
+                    background-color: {{ '#2ed573' if target.is_online() else '#ff4757' }};
+                    box-shadow: 0 0 10px {{ '#2ed573' if target.is_online() else '#ff4757' }};">
+                </span>
+            </div>
+
+            <h2 style="color: white; margin-bottom: 5px;">{{ target.username }}</h2>
+            <p style="color: #a4b0be; font-size: 0.8rem; margin-bottom: 20px;">
+                {{ 'متصل الآن' if target.is_online() else 'غير متصل' }}
+            </p>
+
+            {% if is_friend %}
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; justify-content: space-around;">
+                    <div>
+                        <p style="color: #a4b0be; font-size: 0.9rem;">النقاط</p>
+                        <p style="color: gold; font-size: 1.5rem; font-weight: bold;">{{ target.points }}</p>
+                    </div>
+                    <div>
+                        <p style="color: #a4b0be; font-size: 0.9rem;">المستوى</p>
+                        <p style="color: #55efc4; font-size: 1.5rem; font-weight: bold;">{{ target.level }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <a href="/chat/{{ target.id }}" class="btn" style="background: #6c5ce7; color: white; width: 100%; text-decoration: none; padding: 12px; display: block; border-radius: 10px; margin-bottom: 12px; font-weight: bold; box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3);">
+                <i class="fas fa-paper-plane" style="margin-left: 8px;"></i> مراسلة
+            </a>
+
+            <a href="/unfriend/{{ target.id }}" class="btn" style="background: rgba(255, 71, 87, 0.1); color: #ff4757; width: 100%; border: 1px solid #ff4757; text-decoration: none; padding: 10px; display: block; border-radius: 10px; font-size: 0.9rem;" onclick="return confirm('هل أنت متأكد من حذف الصديق؟')">
+                <i class="fas fa-user-minus"></i> حذف من الأصدقاء
+            </a>
+
+            {% else %}
+            <div style="background: rgba(255, 118, 117, 0.1); padding: 20px; border-radius: 15px; border: 1px dashed #ff7675;">
+                <p style="color: #ff7675; margin-bottom: 15px;">
+                    يجب أن تكون صديقاً لـ <strong>{{ target.username }}</strong> لرؤية إحصائياته.
+                </p>
+                <a href="/add_friend/{{ target.id }}" class="btn" style="background: #2ed573; color: white; text-decoration: none; padding: 8px 20px; border-radius: 8px;">إرسال طلب صداقة</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>FamilyGame | غرفة الانتظار الحقيقية</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #1e2124; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
+
+        .lobby-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            gap: 25px;
+            margin-top: 30px;
+            padding: 0 30px;
+            min-height: 600px;
+        }
+
+        .lobby-panel {
+            background: rgba(47, 53, 66, 0.85);
+            border-radius: 25px;
+            padding: 25px;
+            border: 1px solid rgba(162, 155, 254, 0.2);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .player-card {
+            background: rgba(255, 255, 255, 0.07);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-right: 5px solid #55efc4;
+            animation: slideIn 0.4s ease-out forwards;
+        }
+
+        .friend-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: 0.3s;
+        }
+        .friend-card:hover { background: rgba(255,255,255,0.03); }
+
+        .invite-btn {
+            background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+            border: none; color: white; padding: 10px 18px;
+            border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.3s;
+        }
+        .invite-btn:disabled { background: #4b4b4b; cursor: not-allowed; transform: none; }
+        .invite-btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4); }
+
+        .main-play-btn {
+            background: linear-gradient(45deg, #ff7675, #d63031);
+            color: white; border: none; padding: 22px;
+            border-radius: 18px; font-size: 1.6rem; font-weight: bold;
+            cursor: pointer; width: 100%; margin-top: auto;
+            transition: 0.3s;
+        }
+        .main-play-btn:hover { transform: scale(1.02); filter: brightness(1.1); }
+
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .online { background: #2ed573; box-shadow: 0 0 10px #2ed573; }
+        .offline { background: #ff4757; opacity: 0.5; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container" style="padding: 20px;">
+        <div class="user-bar" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 15px 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
+            <a href="/dashboard" class="invite-btn" style="background: #3d444b; text-decoration: none; font-size: 0.9rem;">
+                <i class="fas fa-arrow-right"></i> انسحاب
+            </a>
+            <h3 style="margin: 0; letter-spacing: 1px;">
+                <i class="fas fa-user-circle" style="color: #a29bfe;"></i> كابتن: 
+                <span style="color: #55efc4;">{{ user.username }}</span>
+            </h3>
+        </div>
+
+        <h1 style="text-align: center; font-size: 3rem; margin: 35px 0; color: #fff; text-shadow: 0 0 20px rgba(108, 92, 231, 0.5);">
+            تجهيز التحدي
+        </h1>
+
+        <div class="lobby-grid">
+            <div class="lobby-panel">
+                <h3 style="color: #55efc4; margin-bottom: 20px;"><i class="fas fa-gamepad"></i> الفريق الحالي</h3>
+                <div id="playersList">
+                    <div class="player-card">
+                        <i class="fas fa-crown" style="color: gold; font-size: 1.3rem;"></i>
+                        <span>{{ user.username }} (المضيف)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lobby-panel" style="text-align: center; justify-content: space-between;">
+                <div>
+                    <i class="fas fa-history" style="font-size: 5rem; color: #a29bfe; margin-bottom: 20px; display: block;"></i>
+                    <h2 style="margin-bottom: 10px;">وقت الإجابة</h2>
+                    <select class="timer-select" id="gameTimer" style="width: 100%; padding: 18px; border-radius: 15px; background: #22272e; color: #55efc4; border: 2px solid #a29bfe; font-size: 1.2rem; outline: none;">
+                        <option value="30">30 ثانية (سريع)</option>
+                        <option value="60" selected>60 ثانية (متوسط)</option>
+                        <option value="90">90 ثانية (طويل)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <button class="main-play-btn" onclick="startGame()">
+                        إطلاق التحدي! <i class="fas fa-rocket"></i>
+                    </button>
+                    <p style="color: #8b949e; margin-top: 15px; font-size: 0.9rem;">سيتم تحويل جميع اللاعبين تلقائياً</p>
+                </div>
+            </div>
+
+            <div class="lobby-panel">
+                <h3 style="color: #a29bfe; margin-bottom: 20px;"><i class="fas fa-users-plus"></i> دعوة الأصدقاء</h3>
+                <div id="friendsList" style="overflow-y: auto; max-height: 400px;">
+                    {% for friend in friends %}
+                    <div class="friend-card">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div class="status-dot {% if friend.is_online %}online{% else %}offline{% endif %}"></div>
+                            <span style="font-weight: 500;">{{ friend.username }}</span>
+                        </div>
+                        {% if friend.is_online %}
+                        <button class="invite-btn" id="btn-{{ friend.id }}" onclick="sendInvite('{{ friend.id }}', '{{ friend.username }}')">
+                            دعوة
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div style="text-align: center; padding: 40px 10px; color: #8b949e;">
+                        <i class="fas fa-user-slash" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                        <p>قائمة الأصدقاء فارغة حالياً</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const lobby_id = "room_{{ user.id }}";
+
+        // 1. تعريف السيرفر بمكان المستخدم وتفعيل قنوات الاستقبال
+        socket.emit('join_lobby', { room: lobby_id });
+        socket.emit('join_lobby', { room: "user_{{ user.id }}" });
+
+        // 2. وظيفة إرسال الدعوة
+        function sendInvite(friendId, friendName) {
+            socket.emit('send_invite', {
+                target_id: friendId,
+                sender_name: "{{ user.username }}",
+                lobby_id: lobby_id
+            });
+
+            // تغيير حالة الزرار فوراً
+            const btn = document.getElementById('btn-' + friendId);
+            btn.innerText = "تم الإرسال";
+            btn.disabled = true;
+            btn.style.background = "#2ed573";
+        }
+
+        // 3. وظيفة بدء الجيم (للمضيف فقط)
+        function startGame() {
+            const timer = document.getElementById('gameTimer').value;
+            socket.emit('start_game_event', { lobby_id: lobby_id, timer: timer });
+        }
+
+        // 4. استقبال اللاعبين الجدد
+        socket.on('player_joined', function(data) {
+            const list = document.getElementById('playersList');
+            if (!document.getElementById('player-' + data.username)) {
+                const newPlayer = document.createElement('div');
+                newPlayer.className = 'player-card';
+                newPlayer.id = 'player-' + data.username;
+                newPlayer.innerHTML = `
+                    <i class="fas fa-user" style="color: #a29bfe;"></i>
+                    <span>${data.username}</span>
+                `;
+                list.appendChild(newPlayer);
+            }
+        });
+
+        // 5. التحويل الجماعي لصفحة اللعبة
+        socket.on('redirect_to_game', function(data) {
+            window.location.href = "/game/" + data.lobby_id + "?time=" + data.timer;
+        });
+
+        // --- أضف هذا الجزء داخل الـ <script> في كودك ---
+
+        // استقبال الدعوة الحقيقية من أي صديق
+        socket.on('receive_invite', function(data) {
+            // إظهار تنبيه شيك للاعب
+            const accept = confirm("البطل " + data.sender_name + " يتحداك الآن! هل تقبل الانضمام لغرفته؟");
+
+            if (accept) {
+                socket.emit('accept_invite', {
+                    lobby_id: data.lobby_id,
+                    username: "{{ user.username }}"
+                });
+                // نقله فوراً لغرفة الصديق
+                window.location.href = "/play"; // أو الراوت اللي بيفتح اللوبي
+            }
+        });
+
+        // تنبيه في حالة رفض الصديق للدعوة
+        socket.on('invite_rejected', function(data) {
+            alert("للأسف، " + data.rejected_by + " مشغول حالياً.");
+        });
+    </script>
+</body>
+</html>

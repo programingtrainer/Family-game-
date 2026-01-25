@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>الرسائل | FamilyGame</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container" style="max-width: 500px;">
+        <div class="user-bar">
+            <a href="/dashboard" class="settings-btn"><i class="fas fa-arrow-right"></i></a>
+            <span>المحادثات</span>
+        </div>
+
+        <div class="inbox-list" style="margin-top: 20px;">
+            {% if conversations %}
+                {% for chat in conversations %}
+                <a href="/chat/{{ chat.friend.id }}" style="text-decoration: none; display: block; margin-bottom: 10px;">
+                    <div class="chat-card" style="display: flex; align-items: center; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 15px; border: 1px solid rgba(255,255,255,0.03); transition: 0.3s;">
+                        <div style="position: relative;">
+                            <div style="width: 55px; height: 55px; background: #6c5ce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.2rem;">
+                                {{ chat.friend.username[0] | upper }}
+                            </div>
+                            {% if chat.friend.is_online() %}
+                            <span style="position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #2ed573; border: 2px solid #1a1a1a; border-radius: 50%;"></span>
+                            {% endif %}
+                        </div>
+
+                        <div style="margin-right: 15px; flex-grow: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h4 style="color: white; margin: 0; font-size: 1rem;">{{ chat.friend.username }}</h4>
+                                <span style="color: #a4b0be; font-size: 0.7rem;">{{ chat.time }}</span>
+                            </div>
+                            <p style="color: #ced6e0; font-size: 0.85rem; margin: 5px 0 0; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;">
+                                {{ chat.last_message }}
+                            </p>
+                        </div>
+
+                        {% if chat.unread_count > 0 %}
+                        <div style="background: #ff4757; color: white; min-width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; padding: 2px;">
+                            {{ chat.unread_count }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; padding: 60px 20px; color: #a4b0be;">
+                    <i class="fas fa-comment-slash" style="font-size: 4rem; margin-bottom: 20px; opacity: 0.2;"></i>
+                    <h3 style="color: white; margin-bottom: 10px;">ليس هناك أي دردشة</h3>
+                    <p style="font-size: 0.9rem; opacity: 0.6;">ابدأ الآن بالتواصل مع أصدقائك المقربين</p>
+                    <a href="/friends" class="btn" style="display: inline-block; margin-top: 20px; background: #6c5ce7; color: white; text-decoration: none; padding: 10px 25px; border-radius: 10px;">البحث عن أصدقاء</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

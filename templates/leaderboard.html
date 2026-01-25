@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>FamilyGame | قائمة الأوائل</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="dashboard-container animate-in">
+        <div class="user-bar">
+            <a href="/dashboard" class="settings-btn" title="الرجوع للرئيسية">
+                <i class="fas fa-arrow-right"></i>
+            </a>
+            <div class="user-info">
+                <span>لوحة الشرف 🏆</span>
+            </div>
+        </div>
+
+        <h1 class="logo" style="font-size: 2.5rem; margin-bottom: 20px;">أقوى اللاعبين</h1>
+
+        <table class="leaderboard-table" style="width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.05); border-radius: 15px; overflow: hidden;">
+            <thead>
+                <tr style="background: #6c5ce7; color: white; text-align: center;">
+                    <th style="padding: 15px;">المركز</th>
+                    <th>اللاعب</th>
+                    <th>النقاط</th>
+                    <th>المستوى</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in players %}
+                <tr style="text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); {% if player.id == user.id %} background: rgba(108, 92, 231, 0.2); border: 1px solid #6c5ce7; {% endif %}">
+                    <td style="padding: 15px;">
+                        {% if loop.index == 1 %}
+                            <span style="font-size: 1.5rem;">🥇</span>
+                        {% elif loop.index == 2 %}
+                            <span style="font-size: 1.3rem;">🥈</span>
+                        {% elif loop.index == 3 %}
+                            <span style="font-size: 1.1rem;">🥉</span>
+                        {% else %}
+                            {{ loop.index }}
+                        {% endif %}
+                    </td>
+                    <td style="font-weight: bold; color: #fff;">
+                        {{ player.username }}
+                        {% if player.id == user.id %} 
+                            <span style="color: #55efc4; font-size: 0.7rem;">(أنت)</span> 
+                        {% endif %}
+                    </td>
+                    <td style="color: gold; font-weight: 900;">{{ player.points }}</td>
+                    <td>
+                        <span style="background: linear-gradient(45deg, #e17055, #fab1a0); padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; color: white;">
+                            Lvl {{ player.level }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="margin-top: 30px;">
+            <a href="/play" class="btn btn-primary">
+                <i class="fas fa-fist-raised"></i> نافسهم الآن!
+            </a>
+        </div>
+    </div>
+</body>
+</html>

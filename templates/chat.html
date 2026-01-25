@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>دردشة مع {{ friend.username }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .chat-box { height: 400px; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; background: rgba(0,0,0,0.2); border-radius: 15px; scroll-behavior: smooth; }
+        .msg { max-width: 80%; padding: 10px 15px; border-radius: 15px; font-size: 0.9rem; line-height: 1.4; position: relative; transition: 0.3s; }
+        .sent { align-self: flex-start; background: #6c5ce7; color: white; border-bottom-right-radius: 2px; }
+        .received { align-self: flex-end; background: rgba(255,255,255,0.1); color: white; border-bottom-left-radius: 2px; }
+        .time { font-size: 0.6rem; opacity: 0.6; margin-top: 5px; display: block; text-align: left; }
+
+        /* خيارات الرسالة */
+        .msg-actions { display: none; position: absolute; top: -25px; left: 0; background: #2f3542; border-radius: 8px; padding: 5px; gap: 10px; z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .msg:hover .msg-actions { display: flex; }
+        .msg-actions a { color: white; font-size: 0.75rem; text-decoration: none; cursor: pointer; }
+        .msg-actions a:hover { color: #55efc4; }
+        .delete-btn:hover { color: #ff4757 !important; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container" style="max-width: 500px;">
+        <div class="user-bar" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <a href="/inbox" class="settings-btn"><i class="fas fa-chevron-right"></i></a>
+                <div style="width: 35px; height: 35px; background: #6c5ce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: bold; color: white;">
+                    {{ friend.username[0] | upper }}
+                </div>
+                <span style="color: white;">{{ friend.username }}</span>
+            </div>
+
+            <a href="/delete_chat/{{ friend.id }}" style="color: #ff4757; text-decoration: none; font-size: 0.8rem;" onclick="return confirm('هل أنت متأكد من حذف كافة الرسائل بينكما؟')">
+                <i class="fas fa-trash-alt"></i> مسح الشات
+            </a>
+        </div>
+
+        <div class="chat-box" id="chatBox">
+            {% for msg in messages %}
+                <div class="msg {{ 'sent' if msg.sender_id == session['user_id'] else 'received' }}">
+                    {% if msg.sender_id == session['user_id'] %}
+                    <div class="msg-actions">
+                        <a onclick="editMsg('{{ msg.id }}', '{{ msg.content }}')"><i class="fas fa-edit"></i> تعديل</a>
+                        <a href="/delete_message/{{ msg.id }}" class="delete-btn" onclick="return confirm('حذف هذه الرسالة؟')"><i class="fas fa-trash"></i> حذف</a>
+                    </div>
+                    {% endif %}
+
+                    <span id="text-{{ msg.id }}">{{ msg.content }}</span>
+                    <span class="time">{{ msg.timestamp.strftime('%I:%M %p') }}</span>
+                </div>
+            {% endfor %}
+        </div>
+
+        <form action="/send_message/{{ friend.id }}" method="POST" style="margin-top: 15px; display: flex; gap: 10px;">
+            <input type="text" id="msgInput" name="content" placeholder="اكتب رسالة..." required 
+                   style="flex-grow: 1; padding: 12px; border-radius: 25px; border: none; background: rgba(255,255,255,0.1); color: white; outline: none;">
+            <button type="submit" style="background: #6c5ce7; border: none; width: 45px; height: 45px; border-radius: 50%; color: white; cursor: pointer;">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // السكرول لأسفل
+        var chatBox = document.getElementById("chatBox");
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // دالة التعديل
+        function editMsg(msgId, oldContent) {
+            let newContent = prompt("تعديل الرسالة:", oldContent);
+            if (newContent && newContent !== oldContent) {
+                // إنشاء Form وهمي لإرسال البيانات للبايثون
+                let form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/edit_message/' + msgId;
+
+                let input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'content';
+                input.value = newContent;
+
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+</body>
+</html>

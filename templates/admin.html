@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة التحكم | Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .status-blocked { color: #ff7675; font-weight: bold; }
+        .status-active { color: #55efc4; font-weight: bold; }
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; color: white; }
+        .admin-table th, .admin-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        .btn-action { padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 0.8rem; margin: 2px; display: inline-block; }
+        .btn-block { background: #fdcb6e; color: black; }
+        .btn-delete { background: #ff7675; color: white; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <h2>أهلاً يا أدمن {{ admin_name }}</h2>
+
+        <div class="stat-card" style="background: rgba(108, 92, 231, 0.2); border: 1px solid #6c5ce7;">
+            <h3><i class="fas fa-users"></i> المستخدمين المسجلين</h3>
+            <p style="font-size: 2rem; margin: 10px 0;">{{ total_count }}</p>
+        </div>
+
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>اليوزر</th>
+                    <th>المستوى</th>
+                    <th>النقاط</th>
+                    <th>الحالة</th>
+                    <th>التحكم</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td>#{{ u.id }}</td>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.level }}</td>
+                    <td>{{ u.points }}</td>
+                    <td>
+                        <span class="{{ 'status-blocked' if u.is_blocked else 'status-active' }}">
+                            {{ "محظور" if u.is_blocked else "نشط" }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="/toggle_block/{{ u.id }}" class="btn-action btn-block">
+                            {{ "فك الحظر" if u.is_blocked else "حظر" }}
+                        </a>
+                        <a href="/admin_delete_user/{{ u.id }}" class="btn-action btn-delete" onclick="return confirm('حذف نهائي؟')">حذف</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <a href="/dashboard" class="back-link">العودة للرئيسية</a>
+    </div>
+</body>
+</html>

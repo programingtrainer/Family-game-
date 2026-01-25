@@ -238,6 +238,8 @@ input-group .toggle-password {
 .sub-buttons {
     display: flex;
     gap: 10px;
+    margin-top: 15px;
+    justify-content: center;
 }
 
 .sub-buttons .btn { flex: 1; padding: 12px; }
@@ -411,4 +413,115 @@ input-group .toggle-password {
     0%, 100% { transform: translateX(0); }
     20%, 60% { transform: translateX(-5px); }
     40%, 80% { transform: translateX(5px); }
+}
+/* حاوية الرسائل */
+.chat-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 20px;
+    scroll-behavior: smooth; /* عشان السكرول ينزل بنعومة */
+}
+
+/* التنسيق العام للفقاعات */
+.msg {
+    max-width: 75%;
+    padding: 10px 16px;
+    border-radius: 18px;
+    font-size: 0.95rem;
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    animation: messageAppear 0.3s ease-out forwards; /* تفعيل الأنيميشن */
+}
+
+/* الرسالة المرسلة (مني) */
+.sent {
+    align-self: flex-start;
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    color: white;
+    border-bottom-right-radius: 4px;
+    transform-origin: left bottom;
+}
+
+/* الرسالة المستقبلة (من الصديق) */
+.received {
+    align-self: flex-end;
+    background: rgba(255, 255, 255, 0.1);
+    color: #f1f2f6;
+    border-bottom-left-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transform-origin: right bottom;
+}
+
+/* الأنيميشن الخاص بظهور الرسالة */
+@keyframes messageAppear {
+    0% {
+        opacity: 0;
+        transform: translateY(10px) scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* تأثير بسيط عند الوقوف بالماوس على الرسالة */
+.msg:hover {
+    filter: brightness(1.1);
+    transition: 0.2s;
+}
+
+/* تنسيق وقت الرسالة */
+.time {
+    font-size: 0.65rem;
+    display: block;
+    margin-top: 4px;
+    opacity: 0.7;
+}
+.msg-options { display: none; position: absolute; top: -20px; right: 0; background: #2f3542; border-radius: 5px; padding: 2px 5px; gap: 8px; }
+.msg:hover .msg-options { display: flex; }
+.msg-options a { color: white; font-size: 0.7rem; text-decoration: none; }
+.msg-options a:hover { color: #ff4757; }
+.btn-custom {
+    flex: 1; /* عشان الزرارين يكونوا نفس المقاس */
+    padding: 12px 20px;
+    border-radius: 15px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px); /* تأثير الزجاج */
+}
+
+/* زر الأصدقاء - لون موف فاتح نيون */
+.btn-friends {
+    background: rgba(162, 155, 254, 0.15);
+    color: #a29bfe;
+    box-shadow: 0 4px 15px rgba(162, 155, 254, 0.1);
+}
+.btn-friends:hover {
+    background: #a29bfe;
+    color: #1e1e2e;
+    box-shadow: 0 0 20px rgba(162, 155, 254, 0.4);
+    transform: translateY(-3px);
+}
+
+/* زر الأوائل - لون أخضر نيون */
+.btn-leaderboard {
+    background: rgba(85, 239, 196, 0.15);
+    color: #55efc4;
+    box-shadow: 0 4px 15px rgba(85, 239, 196, 0.1);
+}
+.btn-leaderboard:hover {
+    background: #55efc4;
+    color: #1e1e2e;
+    box-shadow: 0 0 20px rgba(85, 239, 196, 0.4);
+    transform: translateY(-3px);
 }
