@@ -122,7 +122,8 @@ def signup():
         if existing_user:
             return render_template('signup.html', error="الاسم موجود مسبقاً")
 
-        new_user = User(username=user_name, password=pass_word)
+        hashed_password = generate_password_hash(pass_word)
+        new_user = User(username=user_name, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
         return redirect(url_for('login'))
@@ -143,9 +144,9 @@ def login():
             return render_template('login.html', error="إجابة الكاباتشا غلط", num1=num1, num2=num2)
 
         # 2. البحث عن المستخدم
-        user = User.query.filter_by(username=user_name, password=pass_word).first()
+        user = User.query.filter_by(username=user_name).first()
 
-        if user:
+        if user and check_password_hash(user.password, pass_word):
             if user.is_blocked:
                 return render_template('login.html', error="حسابك محظور من الإدارة 🚫")
 
@@ -210,7 +211,7 @@ def change_password():
     if new_pwd != confirm_pwd:
         return render_template('settings.html', error="غير متطابقة", user=user)
 
-    user.password = new_pwd
+    user.password = generate_password_hash(new_pwd)
     db.session.commit()
     return render_template('settings.html', success="تم التغيير ✅", user=user)
 
@@ -493,7 +494,7 @@ def lobby(lobby_id):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 @socketio.on('player_joined_lobby')
 def handle_player_joined_lobby(data):
