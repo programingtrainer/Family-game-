@@ -7,195 +7,411 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        /* --- تنسيق الهيدر والأيقونات العلوية --- */
+        * { box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-avatar {
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+        .user-details h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #fff;
+        }
+        .user-details p {
+            margin: 4px 0 0 0;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+        }
+
         .header-actions {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(15, 15, 25, 0.4);
-            padding: 4px 12px;
-            border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            gap: 10px;
         }
-        .nav-icon-link {
-            position: relative;
+        .icon-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-decoration: none;
-            font-size: 1.1rem;
             transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+        }
+        .icon-btn:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+        }
+        .icon-btn i { font-size: 1.1rem; }
+        .icon-btn .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff4757;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .logo-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .logo {
+            font-size: 3.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #6c5ce7, #fdcb6e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+        .tagline {
+            color: rgba(255,255,255,0.5);
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+
+        .play-btn {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-        }
-        .settings-icon { color: #a4b0be; }
-        #bellBtn { color: #f1c40f; background: none; border: none; cursor: pointer; }
-        .chat-icon { color: #a29bfe; }
-        .divider { width: 1px; height: 20px; background: rgba(255,255,255,0.1); margin: 0 5px; }
-        .badge {
-            position: absolute; top: -2px; right: -2px; background: #ff4757; color: white;
-            border-radius: 50%; padding: 2px 5px; font-size: 0.6rem; font-weight: bold;
-            border: 2px solid #1e1e2e; box-shadow: 0 0 10px rgba(255, 71, 87, 0.4);
-        }
-
-        /* --- الأزرار الجديدة (الأصدقاء والأوائل) --- */
-        .sub-buttons {
-            display: flex;
             gap: 15px;
-            margin-top: 20px;
-            justify-content: center;
-        }
-
-        .btn-neon {
-            flex: 1;
-            padding: 15px 20px;
-            border-radius: 18px;
+            width: 100%;
+            padding: 22px;
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
             text-decoration: none;
-            font-weight: 800;
-            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(108,92,231,0.4);
+            margin-bottom: 20px;
+        }
+        .play-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(108,92,231,0.5);
+        }
+        .play-btn i { font-size: 1.3rem; }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .action-card {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid transparent;
-            backdrop-filter: blur(5px);
+            padding: 25px 15px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 18px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
         }
+        .action-card:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-3px);
+        }
+        .action-card i {
+            font-size: 1.8rem;
+        }
+        .action-card span {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .action-card.friends { border-color: rgba(162,155,254,0.3); }
+        .action-card.friends i { color: #a29bfe; }
+        .action-card.leaderboard { border-color: rgba(85,239,196,0.3); }
+        .action-card.leaderboard i { color: #55efc4; }
+        .action-card.inbox { border-color: rgba(116,185,255,0.3); }
+        .action-card.inbox i { color: #74b9ff; }
+        .action-card.settings { border-color: rgba(255,255,255,0.15); }
+        .action-card.settings i { color: #dfe6e9; }
 
-        /* زر الأصدقاء - موف منير */
-        .friends-neon {
-            background: rgba(162, 155, 254, 0.1);
-            color: #dcd8ff;
-            border-color: rgba(162, 155, 254, 0.3);
-            box-shadow: 0 4px 15px rgba(162, 155, 254, 0.05);
+        .notifications-dropdown {
+            display: none;
+            position: absolute;
+            top: 55px;
+            left: 0;
+            background: rgba(30, 35, 45, 0.98);
+            backdrop-filter: blur(20px);
+            min-width: 320px;
+            border-radius: 18px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 1000;
+            overflow: hidden;
         }
-        .friends-neon i { color: #a29bfe; font-size: 1.2rem; }
-        .friends-neon:hover {
-            background: #a29bfe;
-            color: #1e1e2e;
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(162, 155, 254, 0.4);
+        .notifications-dropdown.show { display: block; }
+        .notif-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-weight: 700;
+            color: #a29bfe;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .friends-neon:hover i { color: #1e1e2e; }
-
-        /* زر الأوائل - أخضر فسفوري منير */
-        .leader-neon {
-            background: rgba(85, 239, 196, 0.1);
-            color: #e0fff7;
-            border-color: rgba(85, 239, 196, 0.3);
-            box-shadow: 0 4px 15px rgba(85, 239, 196, 0.05);
+        .notif-body { max-height: 350px; overflow-y: auto; }
+        .notif-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            animation: slideDown 0.3s ease;
         }
-        .leader-neon i { color: #55efc4; font-size: 1.2rem; }
-        .leader-neon:hover {
+        .notif-item:last-child { border-bottom: none; }
+        .notif-item.invite {
+            background: rgba(85,239,196,0.08);
+        }
+        .notif-item p {
+            margin: 0 0 10px 0;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.9);
+        }
+        .notif-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .notif-actions button, .notif-actions a {
+            flex: 1;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            font-size: 0.85rem;
+            transition: 0.3s;
+        }
+        .btn-accept {
             background: #55efc4;
             color: #1e1e2e;
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(85, 239, 196, 0.4);
         }
-        .leader-neon:hover i { color: #1e1e2e; }
+        .btn-accept:hover { filter: brightness(1.1); }
+        .btn-reject {
+            background: rgba(255,255,255,0.1);
+            color: #ff6b6b;
+        }
+        .btn-reject:hover { background: #ff6b6b; color: white; }
+        .notif-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+        }
+        .notif-empty i { font-size: 2rem; margin-bottom: 10px; display: block; }
 
-        /* تعديل قائمة التنبيهات لتظهر بشكل صحيح */
-        #requestList {
-            display: none; position: absolute; top: 50px; right: 0;
-            background: #252a34; min-width: 260px; border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6); z-index: 1000; padding: 15px;
-            border: 1px solid rgba(255,255,255,0.05); text-align: right;
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
+
+        {% if user.username == 'gatapro901' %}
+        .admin-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(255,71,87,0.1);
+            border: 1px solid rgba(255,71,87,0.3);
+            border-radius: 12px;
+            color: #ff4757;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .admin-link:hover {
+            background: #ff4757;
+            color: white;
+        }
+        {% endif %}
     </style>
 </head>
 <body>
-    <div class="dashboard-container animate-in">
-
-        <div class="user-bar">
+    <div class="dashboard-container">
+        <div class="header-bar">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="user-details">
+                    <h3>{{ user.username }}</h3>
+                    <p>المستوى {{ user.level }} - {{ user.points }} نقطة</p>
+                </div>
+            </div>
             <div class="header-actions">
-                <a href="/settings" class="nav-icon-link settings-icon" title="الإعدادات">
-                    <i class="fas fa-cog"></i>
-                </a>
-                {% if user.username == 'gatapro901' %}
-                <a href="/admin_panel" class="nav-icon-link" title="لوحة التحكم" style="color: #e17055;">
-                    <i class="fas fa-user-shield"></i>
-                </a>
-                {% endif %}
-                <div class="divider"></div> 
                 <div style="position: relative;">
-                    <button class="nav-icon-link" id="bellBtn" title="التنبيهات">
-                        <i class="fas fa-bell"></i>
-                        {% set total_notes = requests|length + notifications|length %}
-                        {% if total_notes > 0 %}
-                        <span class="badge">{{ total_notes }}</span>
-                        {% endif %}
+                    <button class="icon-btn" id="bellBtn" title="التنبيهات">
+                        <i class="fas fa-bell" style="color: #f1c40f;"></i>
+                        {% set total_notes = requests|length %}
+                        <span class="badge" id="mainBadge" {% if total_notes == 0 %}style="display:none;"{% endif %}>{{ total_notes }}</span>
                     </button>
-                    <div id="requestList">
-                        <h4 style="color: #70a1ff; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; font-size: 0.9rem;">إشعارات اللاعب</h4>
-                        {% for req in requests %}
-                        <div style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
-                            <p style="color: white; font-size: 0.8rem; margin-bottom: 8px;">👤 <b>{{ req.username }}</b> طلب صداقة</p>
-                            <div style="display: flex; gap: 8px;">
-                                <a href="/accept_friend/{{ req.id }}" style="background: #2ed573; color: white; padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 0.7rem; font-weight: bold;">قبول</a>
-                                <a href="/reject_friend/{{ req.id }}" style="background: #ff4757; color: white; padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 0.7rem; font-weight: bold;">رفض</a>
-                            </div>
+                    <div class="notifications-dropdown" id="notifDropdown">
+                        <div class="notif-header">
+                            <i class="fas fa-bell"></i>
+                            التنبيهات
                         </div>
-                        {% endfor %}
-                        {% if not requests and not notifications %}
-                        <p style="color: #a4b0be; font-size: 0.75rem; text-align: center;">لا توجد تنبيهات حالية</p>
-                        {% endif %}
+                        <div class="notif-body" id="notifBody">
+                            <div id="dynamic-invites"></div>
+                            {% for req in requests %}
+                            <div class="notif-item">
+                                <p><i class="fas fa-user-plus" style="color: #a29bfe;"></i> <b>{{ req.username }}</b> يريد إضافتك كصديق</p>
+                                <div class="notif-actions">
+                                    <a href="/accept_friend/{{ req.id }}" class="btn-accept">قبول</a>
+                                    <a href="/reject_friend/{{ req.id }}" class="btn-reject">رفض</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if not requests %}
+                            <div class="notif-empty" id="emptyHint">
+                                <i class="fas fa-check-circle"></i>
+                                <p>لا توجد تنبيهات</p>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-                <a href="/inbox" class="nav-icon-link chat-icon" title="الرسائل">
-                    <i class="fas fa-comment-dots"></i>
-                    {% if unread_messages_count > 0 %}
-                    <span class="badge">{{ unread_messages_count }}</span>
-                    {% endif %}
+                <a href="/logout" class="icon-btn" title="تسجيل الخروج">
+                    <i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i>
                 </a>
             </div>
-            <div class="user-info">
-                <span style="font-weight: bold; color: white;">كابتن: {{ user.username }}</span>
-            </div>
         </div>
 
-        <h1 class="logo" style="font-size: 3.5rem; margin: 40px 0;">FamilyGame</h1>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <i class="fas fa-star" style="color: gold; font-size: 1.5rem; margin-bottom: 10px;"></i>
-                <p style="opacity: 0.8;">نقاطك</p>
-                <h3 style="font-size: 2rem;">{{ user.points }}</h3>
-            </div>
-            <div class="stat-card">
-                <i class="fas fa-fire" style="color: #ff7675; font-size: 1.5rem; margin-bottom: 10px;"></i>
-                <p style="opacity: 0.8;">المستوى</p>
-                <h3 style="font-size: 2rem;">{{ user.level }}</h3>
-            </div>
+        <div class="logo-section">
+            <h1 class="logo">FamilyGame</h1>
+            <p class="tagline">اجمع عائلتك وابدأ التحدي!</p>
         </div>
 
-        <div class="action-buttons">
-            <a href="/play" class="btn btn-primary main-play-btn" style="padding: 22px; font-size: 1.5rem; width: 100%; box-sizing: border-box; display: flex; justify-content: center; align-items: center;">
-                <i class="fas fa-play-circle" style="margin-left: 10px;"></i> العب الآن!
+        <a href="{{ url_for('start_new_game') }}" class="play-btn">
+            <i class="fas fa-play-circle"></i>
+            <span>العب الآن!</span>
+        </a>
+
+        <div class="action-grid">
+            <a href="/friends" class="action-card friends">
+                <i class="fas fa-users"></i>
+                <span>الأصدقاء</span>
             </a>
-
-            <div class="sub-buttons">
-                <a href="/friends" class="btn-neon friends-neon">
-                    <i class="fas fa-users"></i> الأصدقاء
-                </a>
-                <a href="/leaderboard" class="btn-neon leader-neon">
-                    <i class="fas fa-award"></i> الأوائل
-                </a>
-            </div>
+            <a href="/leaderboard" class="action-card leaderboard">
+                <i class="fas fa-trophy"></i>
+                <span>الأوائل</span>
+            </a>
+            <a href="/inbox" class="action-card inbox">
+                <i class="fas fa-envelope"></i>
+                <span>الرسائل</span>
+                {% if unread_messages_count > 0 %}
+                <span style="background: #ff4757; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">{{ unread_messages_count }}</span>
+                {% endif %}
+            </a>
+            <a href="/settings" class="action-card settings">
+                <i class="fas fa-cog"></i>
+                <span>الإعدادات</span>
+            </a>
         </div>
+
+        {% if user.username == 'gatapro901' %}
+        <a href="/admin_panel" class="admin-link">
+            <i class="fas fa-shield-alt"></i> لوحة الإدارة
+        </a>
+        {% endif %}
     </div>
 
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
+        const socket = io();
         const bellBtn = document.getElementById('bellBtn');
-        const requestList = document.getElementById('requestList');
-        bellBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            requestList.style.display = requestList.style.display === 'none' ? 'block' : 'none';
+        const notifDropdown = document.getElementById('notifDropdown');
+        const mainBadge = document.getElementById('mainBadge');
+
+        socket.on('connect', () => {
+            socket.emit('join_lobby', { room: "user_{{ user.id }}" });
         });
-        document.addEventListener('click', (e) => {
-            if (!requestList.contains(e.target) && e.target !== bellBtn) {
-                requestList.style.display = 'none';
+
+        socket.on('receive_invite', function(data) {
+            console.log("Invite received:", data);
+            mainBadge.style.display = 'block';
+            let count = parseInt(mainBadge.innerText || 0);
+            mainBadge.innerText = count + 1;
+
+            const emptyHint = document.getElementById('emptyHint');
+            if (emptyHint) emptyHint.style.display = 'none';
+
+            const html = `
+                <div class="notif-item invite" id="invite-${data.lobby_id}">
+                    <p><i class="fas fa-gamepad" style="color: #55efc4;"></i> <b>${data.sender_name}</b> يدعوك للعب!</p>
+                    <div class="notif-actions">
+                        <a href="/join_lobby/${data.lobby_id}" class="btn-accept">انضمام</a>
+                        <button class="btn-reject" onclick="this.parentElement.parentElement.remove()">تجاهل</button>
+                    </div>
+                </div>`;
+            document.getElementById('dynamic-invites').insertAdjacentHTML('afterbegin', html);
+
+            try { new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3').play(); } catch(e) {}
+        });
+
+        bellBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            notifDropdown.classList.toggle('show');
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!notifDropdown.contains(e.target) && e.target !== bellBtn) {
+                notifDropdown.classList.remove('show');
             }
         });
     </script>

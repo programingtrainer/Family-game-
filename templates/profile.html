@@ -19,14 +19,14 @@
                     {{ target.username[0] | upper }}
                 </div>
                 <span style="position: absolute; bottom: 5px; right: 5px; height: 18px; width: 18px; border-radius: 50%; border: 3px solid #2f3542;
-                    background-color: {{ '#2ed573' if target.is_online() else '#ff4757' }};
-                    box-shadow: 0 0 10px {{ '#2ed573' if target.is_online() else '#ff4757' }};">
+                    background-color: {{ '#2ed573' if target.is_online else '#ff4757' }};
+                    box-shadow: 0 0 10px {{ '#2ed573' if target.is_online else '#ff4757' }};">
                 </span>
             </div>
 
             <h2 style="color: white; margin-bottom: 5px;">{{ target.username }}</h2>
             <p style="color: #a4b0be; font-size: 0.8rem; margin-bottom: 20px;">
-                {{ 'متصل الآن' if target.is_online() else 'غير متصل' }}
+                {{ 'متصل الآن' if target.is_online else 'غير متصل' }}
             </p>
 
             {% if is_friend %}

@@ -89,7 +89,6 @@
             background: linear-gradient(135deg, #fff 0%, #a29bfe 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-shadow: none;
         }
         .page-title p {
             color: rgba(255,255,255,0.5);
@@ -112,6 +111,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            min-height: 400px;
         }
 
         .panel-header {
@@ -121,14 +121,7 @@
             align-items: center;
             gap: 12px;
         }
-        .panel-header i {
-            font-size: 1.3rem;
-        }
-        .panel-header h3 {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
+        .panel-header h3 { margin: 0; font-size: 1.1rem; }
         .panel-header .count {
             margin-right: auto;
             background: rgba(255,255,255,0.1);
@@ -137,11 +130,7 @@
             font-size: 0.85rem;
         }
 
-        .panel-body {
-            padding: 20px;
-            flex: 1;
-            overflow-y: auto;
-        }
+        .panel-body { padding: 20px; flex: 1; overflow-y: auto; }
 
         .player-item {
             display: flex;
@@ -159,27 +148,32 @@
             border-right-color: #fdcb6e;
         }
         .player-avatar {
-            width: 45px;
-            height: 45px;
+            width: 45px; height: 45px;
             background: rgba(255,255,255,0.1);
             border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
+            display: flex; align-items: center; justify-content: center;
         }
-        .player-name {
-            font-weight: 600;
-            font-size: 1rem;
-        }
+        .player-name { font-weight: 600; flex: 1; }
         .player-badge {
-            margin-right: auto;
             background: rgba(253,203,110,0.2);
             color: #fdcb6e;
             padding: 4px 10px;
             border-radius: 8px;
             font-size: 0.75rem;
-            font-weight: 700;
+        }
+        .kick-btn {
+            background: rgba(255,71,87,0.2);
+            color: #ff4757;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: 0.3s;
+        }
+        .kick-btn:hover {
+            background: #ff4757;
+            color: white;
         }
 
         @keyframes playerSlide {
@@ -187,250 +181,130 @@
             to { opacity: 1; transform: translateX(0); }
         }
 
-        .center-panel {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .game-config {
-            text-align: center;
-            padding: 30px;
-        }
+        .game-config { text-align: center; padding: 30px; }
         .timer-icon {
-            width: 100px;
-            height: 100px;
+            width: 100px; height: 100px;
             background: linear-gradient(135deg, rgba(162,155,254,0.3) 0%, rgba(108,92,231,0.2) 100%);
             border-radius: 25px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             margin: 0 auto 25px auto;
-            font-size: 2.5rem;
-            color: #a29bfe;
+            font-size: 2.5rem; color: #a29bfe;
             border: 2px solid rgba(162,155,254,0.3);
-        }
-        .config-title {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: #fff;
         }
         .timer-select {
-            width: 100%;
-            max-width: 320px;
-            padding: 18px 25px;
-            border-radius: 16px;
-            background: rgba(0,0,0,0.3);
-            color: #55efc4;
+            width: 100%; max-width: 320px;
+            padding: 18px 25px; border-radius: 16px;
+            background: rgba(0,0,0,0.3); color: #55efc4;
             border: 2px solid rgba(162,155,254,0.3);
-            font-size: 1.1rem;
-            font-family: 'Cairo', sans-serif;
-            font-weight: 600;
+            font-family: 'Cairo', sans-serif; font-weight: 600;
+            font-size: 1rem;
             outline: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
         }
-        .timer-select:hover, .timer-select:focus {
-            border-color: #a29bfe;
-            box-shadow: 0 0 20px rgba(162,155,254,0.2);
-        }
-        .timer-select option {
-            background: #1e232d;
-            color: #fff;
-            padding: 15px;
-        }
+        .timer-select option { background: #1e232d; color: #fff; }
 
-        .start-section {
-            padding: 30px;
-            border-top: 1px solid rgba(255,255,255,0.06);
-            text-align: center;
-        }
         .start-btn {
-            width: 100%;
-            padding: 22px 40px;
+            width: 100%; padding: 22px;
             background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
-            color: white;
-            border: none;
-            border-radius: 18px;
-            font-size: 1.5rem;
-            font-weight: 700;
+            color: white; border: none; border-radius: 18px;
+            font-size: 1.5rem; font-weight: 700; cursor: pointer;
             font-family: 'Cairo', sans-serif;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            transition: all 0.3s ease;
             box-shadow: 0 10px 30px rgba(214,48,49,0.3);
+            transition: 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
         }
-        .start-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(214,48,49,0.4);
-            filter: brightness(1.1);
-        }
-        .start-btn i {
-            font-size: 1.3rem;
-        }
-        .start-hint {
-            color: rgba(255,255,255,0.4);
-            margin-top: 15px;
-            font-size: 0.9rem;
-        }
+        .start-btn:hover { transform: translateY(-3px); filter: brightness(1.1); }
+        .start-btn:disabled { background: #636e72; cursor: not-allowed; transform: none; }
 
         .friend-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 18px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 14px;
-            margin-bottom: 10px;
-            transition: all 0.3s ease;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px; background: rgba(255,255,255,0.03);
+            border-radius: 14px; margin-bottom: 10px;
+            transition: 0.3s;
         }
-        .friend-item:hover {
-            background: rgba(255,255,255,0.06);
-        }
-        .friend-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-        .status-dot.online {
-            background: #2ed573;
-            box-shadow: 0 0 10px #2ed573;
-            animation: pulse 2s infinite;
-        }
-        .status-dot.offline {
-            background: #636e72;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .friend-name {
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-        .friend-status {
-            font-size: 0.8rem;
-            color: rgba(255,255,255,0.4);
-        }
+        .friend-item:hover { background: rgba(255,255,255,0.06); }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .status-dot.online { background: #2ed573; box-shadow: 0 0 10px #2ed573; animation: pulse 2s infinite; }
+        .status-dot.offline { background: #636e72; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
         .invite-btn {
-            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-weight: 700;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            border: none; color: white;
+            padding: 8px 16px; border-radius: 10px;
+            cursor: pointer; font-weight: 600;
             font-family: 'Cairo', sans-serif;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
+            transition: 0.3s;
         }
-        .invite-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(108,92,231,0.4);
-        }
-        .invite-btn:disabled {
-            background: #2ed573;
-            cursor: default;
-        }
-        .invite-btn.sent {
-            background: #2ed573;
-        }
+        .invite-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(108,92,231,0.4); }
+        .invite-btn.sent { background: #2ed573; }
+        .invite-btn:disabled { cursor: default; }
 
         .empty-state {
-            text-align: center;
-            padding: 50px 20px;
-            color: rgba(255,255,255,0.4);
+            text-align: center; padding: 40px; color: rgba(255,255,255,0.4);
         }
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            display: block;
-            opacity: 0.5;
-        }
-        .empty-state p {
-            margin: 0;
-            font-size: 1rem;
-        }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 15px; display: block; }
 
-        @media (max-width: 1100px) {
-            .lobby-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-            .panel { max-height: none; }
-        }
+        @media (max-width: 1100px) { .lobby-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
     <div class="lobby-wrapper">
         <div class="top-bar">
-            <a href="/dashboard" class="back-btn">
-                <i class="fas fa-arrow-right"></i>
-                <span>العودة</span>
-            </a>
+            <a href="/dashboard" class="back-btn"><i class="fas fa-arrow-right"></i> العودة</a>
             <div class="host-info">
                 <div>
-                    <div class="host-label">الكابتن</div>
-                    <div class="host-name">{{ user.username }}</div>
+                    <div class="host-label">الحالة</div>
+                    <div class="host-name">{% if is_host %}كابتن الغرفة{% else %}لاعب{% endif %}</div>
                 </div>
                 <div class="host-avatar">
-                    <i class="fas fa-crown" style="color: #fdcb6e;"></i>
+                    <i class="fas {% if is_host %}fa-crown{% else %}fa-user{% endif %}" style="color: #fdcb6e;"></i>
                 </div>
             </div>
         </div>
 
         <div class="page-title">
             <h1><i class="fas fa-gamepad"></i> غرفة التحدي</h1>
-            <p>جهز فريقك وابدأ المنافسة الحقيقية!</p>
+            <p>كود الغرفة: <span style="color: #a29bfe; font-weight: bold;">{{ lobby_id }}</span></p>
         </div>
 
         <div class="lobby-grid">
             <div class="panel">
                 <div class="panel-header" style="border-right: 4px solid #55efc4;">
                     <i class="fas fa-users" style="color: #55efc4;"></i>
-                    <h3>الفريق الحالي</h3>
+                    <h3>الفريق</h3>
                     <span class="count" id="playersCount">1</span>
                 </div>
                 <div class="panel-body" id="playersList">
-                    <div class="player-item host">
-                        <div class="player-avatar">
-                            <i class="fas fa-crown" style="color: #fdcb6e;"></i>
-                        </div>
+                    <div class="player-item host" id="player-{{ user.username }}">
+                        <div class="player-avatar"><i class="fas fa-crown" style="color: #fdcb6e;"></i></div>
                         <span class="player-name">{{ user.username }}</span>
-                        <span class="player-badge">المضيف</span>
+                        <span class="player-badge">{% if is_host %}المضيف{% else %}انت{% endif %}</span>
                     </div>
                 </div>
             </div>
 
             <div class="panel center-panel">
                 <div class="game-config">
-                    <div class="timer-icon">
-                        <i class="fas fa-stopwatch"></i>
-                    </div>
-                    <div class="config-title">اختر وقت الإجابة</div>
-                    <select class="timer-select" id="gameTimer">
-                        <option value="30">30 ثانية - تحدي السرعة</option>
-                        <option value="60" selected>60 ثانية - التوازن المثالي</option>
-                        <option value="90">90 ثانية - للتفكير العميق</option>
+                    <div class="timer-icon"><i class="fas fa-stopwatch"></i></div>
+                    <h2 style="margin-bottom: 20px; color: #fff;">وقت الإجابة</h2>
+                    <select class="timer-select" id="gameTimer" {% if not is_host %}disabled{% endif %}>
+                        <option value="30">30 ثانية - سريع</option>
+                        <option value="60" selected>60 ثانية - متوازن</option>
+                        <option value="90">90 ثانية - طويل</option>
                     </select>
                 </div>
-
-                <div class="start-section">
-                    <button class="start-btn" onclick="startGame()">
+                <div style="padding: 30px; margin-top: auto;">
+                    {% if is_host %}
+                    <button class="start-btn" id="startBtn" onclick="startGame()">
                         <span>ابدأ التحدي!</span>
                         <i class="fas fa-rocket"></i>
                     </button>
-                    <p class="start-hint">سيتم تحويل جميع اللاعبين تلقائياً للعبة</p>
+                    {% else %}
+                    <div style="text-align: center; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 15px;">
+                        <i class="fas fa-hourglass-half" style="font-size: 2rem; color: #a29bfe; margin-bottom: 10px;"></i>
+                        <p style="color: rgba(255,255,255,0.7); margin: 0;">في انتظار المضيف لبدء اللعبة...</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -438,33 +312,37 @@
                 <div class="panel-header" style="border-right: 4px solid #a29bfe;">
                     <i class="fas fa-user-plus" style="color: #a29bfe;"></i>
                     <h3>دعوة الأصدقاء</h3>
-                    <span class="count">{{ friends|length }}</span>
                 </div>
-                <div class="panel-body" id="friendsList">
-                    {% for friend in friends %}
-                    <div class="friend-item">
-                        <div class="friend-info">
-                            <div class="status-dot {% if friend.is_online %}online{% else %}offline{% endif %}"></div>
-                            <div>
-                                <div class="friend-name">{{ friend.username }}</div>
-                                <div class="friend-status">{% if friend.is_online %}متصل الآن{% else %}غير متصل{% endif %}</div>
+                <div class="panel-body">
+                    {% if is_host %}
+                        {% if friends %}
+                            {% for friend in friends %}
+                            <div class="friend-item">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="status-dot {% if friend.is_online %}online{% else %}offline{% endif %}"></div>
+                                    <div>
+                                        <div style="font-weight: 600;">{{ friend.username }}</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">{% if friend.is_online %}متصل{% else %}غير متصل{% endif %}</div>
+                                    </div>
+                                </div>
+                                {% if friend.is_online %}
+                                <button class="invite-btn" id="btn-{{ friend.id }}" onclick="sendInvite('{{ friend.id }}', '{{ friend.username }}')">دعوة</button>
+                                {% endif %}
                             </div>
-                        </div>
-                        {% if friend.is_online %}
-                        <button class="invite-btn" id="btn-{{ friend.id }}" onclick="sendInvite('{{ friend.id }}', '{{ friend.username }}')">
-                            دعوة
-                        </button>
+                            {% endfor %}
                         {% else %}
-                        <span style="color: rgba(255,255,255,0.3); font-size: 0.85rem;">غير متاح</span>
+                            <div class="empty-state">
+                                <i class="fas fa-user-friends"></i>
+                                <p>لا يوجد أصدقاء</p>
+                                <a href="/friends" style="color: #a29bfe;">أضف أصدقاء</a>
+                            </div>
                         {% endif %}
-                    </div>
                     {% else %}
-                    <div class="empty-state">
-                        <i class="fas fa-user-friends"></i>
-                        <p>لا يوجد أصدقاء حالياً</p>
-                        <a href="/friends" style="color: #a29bfe; display: inline-block; margin-top: 15px; font-size: 0.9rem;">أضف أصدقاء جدد</a>
-                    </div>
-                    {% endfor %}
+                        <div class="empty-state">
+                            <i class="fas fa-lock"></i>
+                            <p>المضيف فقط يمكنه دعوة الأصدقاء</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -473,19 +351,33 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         const socket = io();
-        const lobby_id = "room_{{ user.id }}";
+        const lobby_id = "{{ lobby_id }}";
+        const isHost = {{ 'true' if is_host else 'false' }};
+        const myUsername = "{{ user.username }}";
+        const myUserId = "{{ user.id }}";
         let playerCount = 1;
+        let players = [myUsername];
 
-        socket.emit('join_lobby', { room: lobby_id });
-        socket.emit('join_lobby', { room: "user_{{ user.id }}" });
+        socket.on('connect', () => {
+            console.log("Connected to server");
+            socket.emit('join_lobby', { room: lobby_id });
+            socket.emit('join_lobby', { room: "user_" + myUserId });
+
+            if (!isHost) {
+                socket.emit('player_joined_lobby', {
+                    lobby_id: lobby_id,
+                    username: myUsername,
+                    user_id: myUserId
+                });
+            }
+        });
 
         function sendInvite(friendId, friendName) {
             socket.emit('send_invite', {
                 target_id: friendId,
-                sender_name: "{{ user.username }}",
+                sender_name: myUsername,
                 lobby_id: lobby_id
             });
-
             const btn = document.getElementById('btn-' + friendId);
             btn.innerText = "تم الإرسال";
             btn.disabled = true;
@@ -497,27 +389,66 @@
             socket.emit('start_game_event', { lobby_id: lobby_id, timer: timer });
         }
 
-        function updatePlayerCount() {
+        function kickPlayer(username, oderId) {
+            if (confirm("هل تريد إزالة " + username + " من اللعبة؟")) {
+                socket.emit('kick_player', {
+                    lobby_id: lobby_id,
+                    username: username,
+                    user_id: oderId
+                });
+                removePlayerFromList(username);
+            }
+        }
+
+        function removePlayerFromList(username) {
+            const el = document.getElementById('player-' + username);
+            if (el) {
+                el.remove();
+                playerCount--;
+                document.getElementById('playersCount').textContent = playerCount;
+                players = players.filter(p => p !== username);
+            }
+        }
+
+        function addPlayerToList(username, oderId) {
+            if (players.includes(username)) return;
+            players.push(username);
+            playerCount++;
             document.getElementById('playersCount').textContent = playerCount;
+
+            const list = document.getElementById('playersList');
+            const div = document.createElement('div');
+            div.className = 'player-item';
+            div.id = 'player-' + username;
+            
+            let kickBtn = '';
+            if (isHost) {
+                kickBtn = `<button class="kick-btn" onclick="kickPlayer('${username}', '${oderId}')"><i class="fas fa-times"></i> إزالة</button>`;
+            }
+            
+            div.innerHTML = `
+                <div class="player-avatar"><i class="fas fa-user" style="color: #a29bfe;"></i></div>
+                <span class="player-name">${username}</span>
+                <span class="player-badge" style="background: rgba(85,239,196,0.2); color: #55efc4;">مستعد</span>
+                ${kickBtn}
+            `;
+            list.appendChild(div);
         }
 
         socket.on('player_joined', function(data) {
-            const list = document.getElementById('playersList');
-            if (!document.getElementById('player-' + data.username)) {
-                playerCount++;
-                updatePlayerCount();
-                
-                const newPlayer = document.createElement('div');
-                newPlayer.className = 'player-item';
-                newPlayer.id = 'player-' + data.username;
-                newPlayer.innerHTML = `
-                    <div class="player-avatar">
-                        <i class="fas fa-user" style="color: #a29bfe;"></i>
-                    </div>
-                    <span class="player-name">${data.username}</span>
-                `;
-                list.appendChild(newPlayer);
+            console.log("Player joined:", data);
+            if (data.username !== myUsername) {
+                addPlayerToList(data.username, data.user_id || '');
             }
+        });
+
+        socket.on('player_left', function(data) {
+            removePlayerFromList(data.username);
+        });
+
+        socket.on('you_were_kicked', function() {
+            alert("تم إزالتك من الغرفة بواسطة المضيف");
+            window.location.href = "/dashboard";
         });
 
         socket.on('redirect_to_game', function(data) {
@@ -525,18 +456,7 @@
         });
 
         socket.on('receive_invite', function(data) {
-            const accept = confirm("البطل " + data.sender_name + " يتحداك! هل تقبل الانضمام؟");
-            if (accept) {
-                socket.emit('accept_invite', {
-                    lobby_id: data.lobby_id,
-                    username: "{{ user.username }}"
-                });
-                window.location.href = "/play";
-            }
-        });
-
-        socket.on('invite_rejected', function(data) {
-            alert("للأسف، " + data.rejected_by + " مشغول حالياً.");
+            console.log("Received invite:", data);
         });
     </script>
 </body>

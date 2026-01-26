@@ -3,11 +3,11 @@ import random
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, delete, select
-from datetime import datetime # ضيف دي فوق خالص مع الـ imports
+from datetime import datetime
 from flask_socketio import SocketIO, emit, join_room
-from flask_login import LoginManager, UserMixin, current_user, login_required, login_user
-from flask_socketio import emit, join_room
-
+from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
+import uuid
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'FamilyGame_Secret_123'
@@ -452,12 +452,12 @@ def handle_connect():
 
 @socketio.on('send_invite')
 def handle_invite(data):
+    # التأكد من أن target_id يصل كـ string أو int حسب قاعدة بياناتك
     target_friend_id = data['target_id']
     sender_name = data['sender_name']
     lobby_id = data['lobby_id']
 
-    # السيرفر بيبعت إشعار للصديق (باستخدام معرفه الخاص)
-    # هنا بنفترض إن كل مستخدم منضم لغرفة باسم الـ ID بتاعه
+    # إرسال التنبيه لغرفة المستخدم المستهدف فقط
     emit('receive_invite', {
         'sender_name': sender_name,
         'lobby_id': lobby_id
@@ -471,28 +471,37 @@ def handle_accept(data):
     # نبعث لكل اللي في الأوضة إن فيه بطل جديد انضم
     emit('player_joined', {'username': username}, room=lobby_id)
 
-@app.route('/play')
+@app.route('/play/<lobby_id>')
 @login_required 
-def lobby():
-    # سحب الأصدقاء المقبولين
+def lobby(lobby_id):
     friend_conns = Friend.query.filter_by(user_id=current_user.id, status='accepted').all()
     friends_list = []
     for f in friend_conns:
         friend_user = db.session.get(User, f.friend_id)
         if friend_user:
+            # هنضيف حالة الـ online وهمياً دلوقتي أو لو عندك column ليها
             friends_list.append(friend_user)
 
-    return render_template('lobby.html', user=current_user, friends=friends_list)
+    # بنقرأ هل هو مضيف من الرابط
+    is_host = request.args.get('host', 'false') == 'true'
+
+    return render_template('lobby.html', 
+                           user=current_user, 
+                           friends=friends_list, 
+                           lobby_id=lobby_id, 
+                           is_host=is_host)
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-@socketio.on('join_lobby')
-def on_join(data):
-    room = data['room']
-    join_room(room)
-    print(f"User joined room: {room}")
+@socketio.on('player_joined_lobby')
+def handle_player_joined_lobby(data):
+    lobby_id = data['lobby_id']
+    username = data['username']
+    user_id = data.get('user_id', '')
+    emit('player_joined', {'username': username, 'user_id': user_id}, room=lobby_id, include_self=False)
+    print(f"Broadcasted: {username} joined {lobby_id}")
 
 @socketio.on('start_game_event')
 def handle_start_game(data):
@@ -504,6 +513,40 @@ def handle_start_game(data):
         'lobby_id': lobby_id,
         'timer': timer
     }, room=lobby_id)
-    
+
+@socketio.on('reject_invite')
+def handle_reject(data):
+    host_id = data['host_id']
+    rejecter_name = data['rejecter_name']
+
+    # نبعت للمضيف إن فلان رفض في غرفته الخاصة (user_ID)
+    emit('invite_rejected', {
+        'msg': f"للأسف، {rejecter_name} رفض التحدي بتاعك."
+    }, room=f"user_{host_id}")
+
+@app.route('/start_new_game')
+@login_required
+def start_new_game():
+    new_lobby_id = str(uuid.uuid4())[:8]
+    return redirect(url_for('lobby', lobby_id=new_lobby_id, host='true'))
+
+@app.route('/join_lobby/<lobby_id>')
+@login_required
+def join_lobby(lobby_id):
+    return redirect(url_for('lobby', lobby_id=lobby_id, host='false'))
+
+@socketio.on('join_lobby')
+def handle_join_lobby(data):
+    room = data['room']
+    join_room(room)
+    print(f"User joined room: {room}")
+
+@socketio.on('kick_player')
+def handle_kick_player(data):
+    lobby_id = data['lobby_id']
+    kicked_username = data['username']
+    emit('you_were_kicked', {}, room=f"user_{data['user_id']}")
+    emit('player_left', {'username': kicked_username}, room=lobby_id)
+
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=True, log_output=True)

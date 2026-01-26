@@ -22,13 +22,13 @@
         {% if results %}
         <div class="results-box" style="background: rgba(108, 92, 231, 0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(108, 92, 231, 0.2);">
             <p style="font-size: 0.9rem; color: #70a1ff; margin-bottom: 10px; font-weight: bold;">نتائج البحث:</p>
-            {% for user in results %}
+            {% for u in results %}
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="height: 10px; width: 10px; border-radius: 50%; display: inline-block; background-color: {{ '#2ed573' if user.is_online() else '#ff4757' }};"></span>
-                    <a href="/profile/{{ user.id }}" style="color: white; text-decoration: none; font-weight: bold;">{{ user.username }}</a>
+                    <span style="height: 10px; width: 10px; border-radius: 50%; background-color: {{ '#2ed573' if u.is_online() else '#ff4757' }};"></span>
+                    <a href="/profile/{{ u.id }}" style="color: white; text-decoration: none; font-weight: bold;">{{ u.username }}</a>
                 </div>
-                <a href="/add_friend/{{ user.id }}" class="btn" style="padding: 5px 15px; font-size: 0.8rem; background: #2ed573; text-decoration: none; border-radius: 5px; color: white;">إضافة</a>
+                <a href="/add_friend/{{ u.id }}" class="btn" style="padding: 5px 15px; font-size: 0.8rem; background: #2ed573; text-decoration: none; border-radius: 5px; color: white;">إضافة</a>
             </div>
             {% endfor %}
         </div>
@@ -45,18 +45,24 @@
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div style="position: relative;">
                             <span style="height: 12px; width: 12px; border-radius: 50%; display: inline-block; 
-                                background-color: {{ '#2ed573' if friend.is_online() else '#ff4757' }};
-                                box-shadow: 0 0 8px {{ '#2ed573' if friend.is_online() else '#ff4757' }};">
+                                background-color: {{ '#2ed573' if friend.is_online else '#ff4757' }};
+                                box-shadow: 0 0 8px {{ '#2ed573' if friend.is_online else '#ff4757' }};">
                             </span>
                         </div>
 
-                        <a href="/profile/{{ friend.id }}" style="color: white; text-decoration: none; font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 5px;">
+                        <a href="/profile/{{ friend.id }}" style="color: white; text-decoration: none; font-weight: 700; font-size: 1.1rem;">
                             {{ friend.username }}
-                            <i class="fas fa-chevron-left" style="font-size: 0.7rem; opacity: 0.5;"></i>
                         </a>
                     </div>
-                    <div style="text-align: left;">
-                         <span class="badge" style="background: #6c5ce7; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: bold;">Lvl {{ friend.level }}</span>
+
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        {% if friend.is_online %}
+                        <button onclick="sendChallenge('{{ friend.id }}', '{{ friend.username }}')" 
+                                style="background: #f1c40f; color: #1e1e2e; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.8rem; transition: 0.3s;">
+                            تحدي 🎮
+                        </button>
+                        {% endif %}
+                        <span class="badge" style="background: #6c5ce7; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: bold;">Lvl {{ friend.level }}</span>
                     </div>
                 </div>
                 {% endfor %}
@@ -72,5 +78,41 @@
             <i class="fas fa-arrow-right" style="margin-left: 5px;"></i>العودة للرئيسية
         </a>
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        function sendChallenge(friendId, friendName) {
+            // 1. توليد رقم غرفة عشوائي
+            const lobbyId = 'lobby_' + Math.random().toString(36).substr(2, 9);
+
+            // 2. إرسال إشارة التحدي للسيرفر
+            socket.emit('send_invite', {
+                target_id: friendId,
+                sender_id: '{{ user.id }}',
+                sender_name: '{{ user.username }}',
+                lobby_id: lobbyId
+            });
+
+            socket.emit('join_lobby', { room: "user_{{ user.id }}" });
+
+            socket.on('receive_invite', function(data) {
+                if (confirm("البطل " + data.sender_name + " بيتحداك! تدخل الغرفة؟")) {
+                    // بنوديه للرابط اللي المضيف فتحه
+                    window.location.href = "/play/" + data.lobby_id;
+                }
+            });
+            
+            // 3. توجيه المضيف لصفحة اللوبي بصفة host
+            alert('تم إرسال طلب التحدي لـ ' + friendName);
+            window.location.href = `/play/${lobbyId}?host=true`;
+        }
+
+        // استقبال رد الرفض من الطرف الآخر
+        socket.on('invite_rejected', function(data) {
+            alert(data.msg);
+        });
+    </script>
 </body>
 </html>
