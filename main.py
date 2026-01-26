@@ -146,21 +146,34 @@ def login():
         # 2. البحث عن المستخدم
         user = User.query.filter_by(username=user_name).first()
 
-        if user and check_password_hash(user.password, pass_word):
-            if user.is_blocked:
-                return render_template('login.html', error="حسابك محظور من الإدارة 🚫")
+        if user:
+            password_valid = False
+            
+            # Check if password is hashed (starts with common hash prefixes)
+            if user.password.startswith(('pbkdf2:', 'scrypt:', 'sha256$')):
+                password_valid = check_password_hash(user.password, pass_word)
+            else:
+                # Plain text password (old users) - check directly then upgrade
+                if user.password == pass_word:
+                    password_valid = True
+                    # Upgrade to hashed password
+                    user.password = generate_password_hash(pass_word)
+                    db.session.commit()
+            
+            if password_valid:
+                if user.is_blocked:
+                    num1, num2 = random.randint(1, 10), random.randint(1, 10)
+                    session['captcha_result'] = num1 + num2
+                    return render_template('login.html', error="حسابك محظور من الإدارة", num1=num1, num2=num2)
 
-            # --- التعديل السحري هنا ---
-            # السطر ده هو اللي بيعرف `@login_required` إنك موجود بجد
-            login_user(user, remember=True) 
+                login_user(user, remember=True) 
+                session['user_id'] = user.id
+                session['username'] = user.username
+                return redirect(url_for('dashboard'))
 
-            # تخزين البيانات الإضافية في السشن لو محتاجها
-            session['user_id'] = user.id
-            session['username'] = user.username
-
-            return redirect(url_for('dashboard'))
-
-        return render_template('login.html', error="بيانات غلط", num1=random.randint(1,10), num2=random.randint(1,10))
+        num1, num2 = random.randint(1, 10), random.randint(1, 10)
+        session['captcha_result'] = num1 + num2
+        return render_template('login.html', error="اسم المستخدم أو كلمة المرور غلط", num1=num1, num2=num2)
 
     # للجزء الـ GET
     num1, num2 = random.randint(1, 10), random.randint(1, 10)
