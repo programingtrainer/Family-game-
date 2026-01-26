@@ -9,12 +9,16 @@ from flask_login import LoginManager, UserMixin, current_user, login_required, l
 import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
 
+ARABIC_LETTERS = ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'هـ', 'و', 'ي']
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'FamilyGame_Secret_123'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///familygame_vFinal.db'
 socketio = SocketIO(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+game_results = {}
 
 db = SQLAlchemy(app)
 
@@ -520,12 +524,16 @@ def handle_player_joined_lobby(data):
 @socketio.on('start_game_event')
 def handle_start_game(data):
     lobby_id = data['lobby_id']
-    timer = data['timer']
+    timer_value = data['timer'] # الوقت اللي أنت حددته (مثلاً 60 ثانية)
 
-    # أمر تحويل جماعي لكل المتصلين في الأوضة
+    # اختيار حرف عشوائي للجولة الأولى
+    selected_letter = random.choice(ARABIC_LETTERS)
+
+    # إرسال أمر البدء لكل اللاعبين في الغرفة
     emit('redirect_to_game', {
         'lobby_id': lobby_id,
-        'timer': timer
+        'timer': timer_value,
+        'letter': selected_letter
     }, room=lobby_id)
 
 @socketio.on('reject_invite')
@@ -561,6 +569,75 @@ def handle_kick_player(data):
     kicked_username = data['username']
     emit('you_were_kicked', {}, room=f"user_{data['user_id']}")
     emit('player_left', {'username': kicked_username}, room=lobby_id)
+
+@app.route('/game/<lobby_id>')
+@login_required
+def game_page(lobby_id):
+    timer = request.args.get('timer', 60)
+    letter = request.args.get('letter', 'أ')
+    return render_template('game.html', lobby_id=lobby_id, timer=timer, letter=letter, user=current_user)
+
+@socketio.on('game_chat')
+def handle_game_chat(data):
+    emit('receive_game_chat', data, room=data['room'])
+
+# 1. الدالة اللي بتستقبل الإجابات وتقفل اللعب عند الباقي
+@socketio.on('player_finished')
+def handle_finish(data):
+    lobby_id = data['lobby_id']
+    username = data['username']
+    answers = data['answers']
+    # الحرف اللي كان شغال في الجولة دي (ممكن تبعته من الـ JS أو تحفظه في السيرفر)
+    current_letter = data.get('letter', 'أ') 
+
+    if lobby_id not in game_results:
+        game_results[lobby_id] = {}
+
+    # حفظ إجابات اللاعب اللي خلص
+    game_results[lobby_id][username] = answers
+
+    # إبلاغ الكل إن اللعب وقف فوراً
+    emit('stop_game_for_all', {'winner': username}, room=lobby_id)
+
+    # ابدأ الحساب (هنا بنادي دالة الحساب اللي تحت)
+    calculate_scores(lobby_id, current_letter)
+
+# 2. دالة الحساب (دي دالة داخلية مش محتاجة @socketio.on)
+def calculate_scores(lobby_id, current_letter):
+    if lobby_id not in game_results:
+        return
+
+    all_players_data = game_results[lobby_id]
+    final_scores = {user: 0 for user in all_players_data.keys()}
+
+    # بنلف على الـ 6 خانات (ولد، بنت، حيوان، إلخ)
+    for i in range(6):
+        category_answers = []
+
+        # تجميع الكلمات اللي بتبدأ بالحرف الصح بس
+        for user in all_players_data:
+            ans = all_players_data[user][i].strip()
+            if ans and ans.startswith(current_letter):
+                category_answers.append(ans)
+
+        # توزيع الـ 10 والـ 5
+        for user in all_players_data:
+            user_ans = all_players_data[user][i].strip()
+
+            if not user_ans or not user_ans.startswith(current_letter):
+                points = 0
+            elif category_answers.count(user_ans) > 1:
+                points = 5  # متكررة
+            else:
+                points = 10 # فريدة
+
+            final_scores[user] += points
+
+    # إرسال النتائج النهائية للكل في اللوبي
+    emit('show_results', {'scores': final_scores}, room=lobby_id)
+
+    # مسح الذاكرة للجولة الجاية
+    del game_results[lobby_id]
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=True, log_output=True)

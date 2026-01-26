@@ -372,6 +372,10 @@
             }
         });
 
+        socket.on('redirect_to_game', function(data) {
+            window.location.href = `/game/${data.lobby_id}?timer=${data.timer}&letter=${data.letter}`;
+        });
+
         function sendInvite(friendId, friendName) {
             socket.emit('send_invite', {
                 target_id: friendId,
@@ -385,8 +389,11 @@
         }
 
         function startGame() {
-            const timer = document.getElementById('gameTimer').value;
-            socket.emit('start_game_event', { lobby_id: lobby_id, timer: timer });
+            const selectedTimer = document.getElementById('gameTimer').value; // الـ Select اللي فيه 60, 90, 120
+            socket.emit('start_game_event', {
+                lobby_id: lobby_id,
+                timer: selectedTimer
+            });
         }
 
         function kickPlayer(username, oderId) {

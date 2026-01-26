@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>FamilyGame | التحدي بدأ!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --neon-color: #55efc4; --bg-dark: #0f0f1b; }
+        body { background: var(--bg-dark); color: white; font-family: 'Cairo', sans-serif; margin: 0; overflow-x: hidden; }
+
+        /* تصميم التايمر والحرف */
+        .game-header { display: flex; justify-content: space-around; align-items: center; padding: 20px; background: rgba(255,255,255,0.05); border-bottom: 2px solid var(--neon-color); }
+        .timer-box { font-size: 2rem; color: #ff7675; font-weight: 900; }
+        .letter-box { font-size: 4rem; color: var(--neon-color); text-shadow: 0 0 20px var(--neon-color); }
+
+        .game-container { display: grid; grid-template-columns: 1fr 300px; gap: 20px; padding: 20px; max-width: 1200px; margin: auto; }
+
+        /* خانات اللعبة */
+        .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .input-group { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid #34495e; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #a29bfe; }
+        .input-group input { width: 100%; background: none; border: none; border-bottom: 2px solid #555; color: white; font-size: 1.2rem; outline: none; padding: 5px; }
+        .input-group input:focus { border-bottom-color: var(--neon-color); }
+        .input-group input:disabled { color: #636e72; border-bottom-color: #2d3436; cursor: not-allowed; }
+
+        /* الشات الجماعي */
+        .chat-box { background: #1e1e2e; border-radius: 15px; display: flex; flex-direction: column; height: 500px; border: 1px solid #34495e; }
+        #chat-messages { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.9rem; }
+        .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #34495e; }
+        .chat-input-area input { flex: 1; background: #2d3436; border: none; color: white; padding: 8px; border-radius: 5px; outline: none; }
+
+        .stop-btn { grid-column: span 2; padding: 20px; background: var(--neon-color); color: #000; border: none; border-radius: 12px; font-size: 1.5rem; font-weight: 900; cursor: pointer; transition: 0.3s; }
+        .stop-btn:hover { transform: scale(1.02); box-shadow: 0 0 20px var(--neon-color); }
+    </style>
+</head>
+<body>
+
+    <div class="game-header">
+        <div class="timer-box">الوقت: <span id="timer-display">{{ timer }}</span></div>
+        <div class="letter-box">الحرف: {{ letter }}</div>
+        <div class="score-box">لاعب: {{ user.username }}</div>
+    </div>
+
+    <div class="game-container">
+        <div class="inputs-area">
+            <div class="inputs-grid" id="game-fields">
+                <div class="input-group"><label>اسم ولد</label><input type="text" class="game-input" id="val-1" onpaste="return false;"></div>
+                <div class="input-group"><label>اسم بنت</label><input type="text" class="game-input" id="val-2" onpaste="return false;"></div>
+                <div class="input-group"><label>حيوان</label><input type="text" class="game-input" id="val-3" onpaste="return false;"></div>
+                <div class="input-group"><label>نبات</label><input type="text" class="game-input" id="val-4" onpaste="return false;"></div>
+                <div class="input-group"><label>بلاد</label><input type="text" class="game-input" id="val-5" onpaste="return false;"></div>
+                <div class="input-group"><label>جماد / ممثل</label><input type="text" class="game-input" id="val-6" onpaste="return false;"></div>
+                <button class="stop-btn" onclick="finishGame()">تم / إيقاف اللعبة!</button>
+            </div>
+        </div>
+
+        <div class="chat-box">
+            <div id="chat-messages"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-msg" placeholder="اكتب لزمايلك...">
+                <button onclick="sendChat()" style="background:var(--neon-color); border:none; margin-right:5px; border-radius:5px; cursor:pointer;"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const lobbyId = "{{ lobby_id }}";
+        let timeLeft = parseInt("{{ timer }}");
+        let timerId;
+
+        socket.emit('join_lobby', { room: lobbyId });
+
+        // 1. تشغيل التايمر
+        timerId = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-display').innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timerId);
+                finishGame(); // قفل اللعب لما الوقت يخلص
+            }
+        }, 1000);
+
+        // 2. إيقاف اللعب عند الكل
+        function finishGame() {
+            clearInterval(timerId);
+            const inputs = document.querySelectorAll('.game-input');
+            let answers = [];
+            inputs.forEach(input => answers.push(input.value));
+
+            // السطر ده لازم يبعت الحرف كمان
+            socket.emit('player_finished', { 
+                lobby_id: lobbyId, 
+                username: "{{ user.username }}", 
+                answers: answers,
+                letter: "{{ letter }}" // تأكد إن المتغير ده مبعوث للصفحة
+            });
+        }
+
+        socket.on('stop_game_for_all', (data) => {
+            alert("اللعبة توقفت! " + data.winner + " خلص الأول.");
+            clearInterval(timerId);
+            document.querySelectorAll('.game-input').forEach(i => i.disabled = true);
+        });
+
+        // 3. الشات الجماعي
+        function sendChat() {
+            const msg = document.getElementById('chat-msg').value;
+            if(msg) {
+                socket.emit('game_chat', { room: lobbyId, user: "{{ user.username }}", message: msg });
+                document.getElementById('chat-msg').value = '';
+            }
+        }
+
+        socket.on('receive_game_chat', (data) => {
+            const div = document.createElement('div');
+            div.innerHTML = `<b>${data.user}:</b> ${data.message}`;
+            document.getElementById('chat-messages').appendChild(div);
+            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+        });
+
+        socket.on('show_results', (data) => {
+            let resultsHtml = "<h2>النتائج النهائية الجولة دي:</h2><ul style='list-style:none; padding:0;'>";
+
+            for (const [user, score] of Object.entries(data.scores)) {
+                resultsHtml += `<li style="padding:10px; border-bottom:1px solid #55efc4;">
+                    <b>${user}:</b> حصد ${score} نقطة 🌟
+                </li>`;
+            }
+            resultsHtml += "</ul><button onclick='window.location.reload()' style='padding:10px; background:#a29bfe; border:none; border-radius:5px; cursor:pointer; margin-top:10px;'>جولة جديدة</button>";
+
+            // عرض النتائج في Modal أو تغيير محتوى الصفحة
+            document.body.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; height:100vh; text-align:center;">
+                <div style="background:#1e1e2e; padding:40px; border-radius:20px; border:2px solid #55efc4; box-shadow:0 0 30px rgba(85,239,196,0.3);">
+                    ${resultsHtml}
+                </div>
+            </div>`;
+        });
+    </script>
+</body>
+</html>
