@@ -583,74 +583,92 @@ def game_page(lobby_id):
 def handle_game_chat(data):
     emit('receive_game_chat', data, room=data['room'])
 
-# 1. الدالة اللي بتستقبل الإجابات وتقفل اللعب عند الباقي
 @socketio.on('player_finished')
 def handle_finish(data):
     lobby_id = data['lobby_id']
     username = data['username']
     answers = data['answers']
-    # الحرف اللي كان شغال في الجولة دي (ممكن تبعته من الـ JS أو تحفظه في السيرفر)
-    current_letter = data.get('letter', 'أ') 
+    current_letter = data.get('letter', 'أ')
+    is_time_up = data.get('time_up', False)
 
     if lobby_id not in game_results:
-        game_results[lobby_id] = {}
+        game_results[lobby_id] = {'players': {}, 'ended': False, 'letter': current_letter}
 
-    # حفظ إجابات اللاعب اللي خلص
-    game_results[lobby_id][username] = answers
+    if game_results[lobby_id].get('ended'):
+        return
 
-    # إبلاغ الكل إن اللعب وقف فوراً
-    emit('stop_game_for_all', {'winner': username}, room=lobby_id)
+    game_results[lobby_id]['players'][username] = answers
 
-    # ابدأ الحساب (هنا بنادي دالة الحساب اللي تحت)
-    calculate_scores(lobby_id, current_letter)
+    if not is_time_up:
+        emit('stop_game_for_all', {'winner': username}, room=lobby_id)
+    
+    game_results[lobby_id]['ended'] = True
+    calculate_scores(lobby_id)
 
-# 2. دالة الحساب (دي دالة داخلية مش محتاجة @socketio.on)
-def calculate_scores(lobby_id, current_letter):
+@socketio.on('time_up')
+def handle_time_up(data):
+    lobby_id = data['lobby_id']
+    username = data['username']
+    answers = data['answers']
+    current_letter = data.get('letter', 'أ')
+
+    if lobby_id not in game_results:
+        game_results[lobby_id] = {'players': {}, 'ended': False, 'letter': current_letter}
+
+    game_results[lobby_id]['players'][username] = answers
+
+    if not game_results[lobby_id].get('ended'):
+        game_results[lobby_id]['ended'] = True
+        emit('game_ended', {'reason': 'time_up'}, room=lobby_id)
+        calculate_scores(lobby_id)
+
+def calculate_scores(lobby_id):
     if lobby_id not in game_results:
         return
 
-    all_players = game_results[lobby_id]
-    # مصفوفة لتخزين النتائج النهائية
+    lobby_data = game_results[lobby_id]
+    all_players = lobby_data.get('players', {})
+    current_letter = lobby_data.get('letter', 'أ')
+    
+    if not all_players:
+        return
+
     scores_summary = {}
 
     for username, answers in all_players.items():
         total_p = 0
         for i in range(len(answers)):
-            ans = answers[i].strip()
-
-            # 1. التأكد من الحرف
-            if ans.startswith(current_letter):
-                # 2. التأكد من التكرار (نجمع كل إجابات اللاعبين في نفس الخانة)
-                all_ans_in_cat = [p_ans[i].strip() for p_ans in all_players.values()]
-
-                if all_ans_in_cat.count(ans) > 1:
-                    total_p += 5  # متشابه
+            ans = answers[i].strip() if i < len(answers) else ""
+            
+            if not ans:
+                continue
+                
+            first_char = ans[0] if ans else ""
+            if first_char == current_letter:
+                all_ans_in_cat = []
+                for p_ans in all_players.values():
+                    if i < len(p_ans):
+                        all_ans_in_cat.append(p_ans[i].strip().lower())
+                
+                if all_ans_in_cat.count(ans.lower()) > 1:
+                    total_p += 5
                 else:
-                    total_p += 10 # فريد
-            else:
-                total_p += 0 # حرف غلط أو فاضي
-
+                    total_p += 10
+        
         scores_summary[username] = total_p
 
-    # تحويل النتائج لشكل "Leaderboard" (قائمة مرتبة) عشان الـ JS اللي عندك
     leaderboard = sorted(scores_summary.items(), key=lambda x: x[1], reverse=True)
 
-    # إرسال النتيجة للكل
-    emit('show_results', {'leaderboard': leaderboard}, room=lobby_id)
-
-    # --- الجزء الأهم: إضافة النقاط لليوزر في قاعدة البيانات ---
-    for username, points in final_scores.items():
+    for username, points in scores_summary.items():
         player = User.query.filter_by(username=username).first()
         if player:
-            player.points += points # تحديث نقاط اللاعب الدائمة
+            player.points += points
+            if player.points >= player.level * 100:
+                player.level += 1
     db.session.commit()
 
-    # ترتيب المراكز (من الأعلى للأقل)
-    leaderboard = sorted(final_scores.items(), key=lambda x: x[1], reverse=True)
-    # إرسال النتيجة النهائية
     emit('show_results', {'leaderboard': leaderboard}, room=lobby_id)
 
-    # تنظيف الذاكرة
     if lobby_id in game_results:
         del game_results[lobby_id]
 

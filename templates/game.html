@@ -6,60 +6,250 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --neon-color: #55efc4; --bg-dark: #0f0f1b; }
-        body { background: var(--bg-dark); color: white; font-family: 'Cairo', sans-serif; margin: 0; overflow-x: hidden; }
+        :root { --neon-color: #55efc4; --bg-dark: #0f0c29; }
+        * { box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: white; 
+            font-family: 'Cairo', sans-serif; 
+            margin: 0; 
+            min-height: 100vh;
+        }
 
-        /* تصميم التايمر والحرف */
-        .game-header { display: flex; justify-content: space-around; align-items: center; padding: 20px; background: rgba(255,255,255,0.05); border-bottom: 2px solid var(--neon-color); }
-        .timer-box { font-size: 2rem; color: #ff7675; font-weight: 900; }
-        .letter-box { font-size: 4rem; color: var(--neon-color); text-shadow: 0 0 20px var(--neon-color); }
+        .game-header { 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            padding: 20px; 
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--neon-color); 
+        }
+        .timer-box { 
+            font-size: 2rem; 
+            color: #ff7675; 
+            font-weight: 900;
+            background: rgba(255,118,117,0.1);
+            padding: 10px 25px;
+            border-radius: 15px;
+            border: 2px solid rgba(255,118,117,0.3);
+        }
+        .timer-box.warning { animation: pulse 0.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .letter-box { 
+            font-size: 3.5rem; 
+            color: var(--neon-color); 
+            text-shadow: 0 0 30px var(--neon-color);
+            background: rgba(85,239,196,0.1);
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            border: 2px solid var(--neon-color);
+        }
+        .player-box {
+            font-size: 1.2rem;
+            color: #a29bfe;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-        .game-container { display: grid; grid-template-columns: 1fr 300px; gap: 20px; padding: 20px; max-width: 1200px; margin: auto; }
+        .game-container { 
+            display: grid; 
+            grid-template-columns: 1fr 320px; 
+            gap: 25px; 
+            padding: 25px; 
+            max-width: 1300px; 
+            margin: auto; 
+        }
 
-        /* خانات اللعبة */
-        .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .input-group { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid #34495e; }
-        .input-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #a29bfe; }
-        .input-group input { width: 100%; background: none; border: none; border-bottom: 2px solid #555; color: white; font-size: 1.2rem; outline: none; padding: 5px; }
-        .input-group input:focus { border-bottom-color: var(--neon-color); }
-        .input-group input:disabled { color: #636e72; border-bottom-color: #2d3436; cursor: not-allowed; }
+        .inputs-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 18px; 
+        }
+        .input-group { 
+            background: rgba(255,255,255,0.05); 
+            padding: 20px; 
+            border-radius: 18px; 
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.3s;
+        }
+        .input-group:focus-within {
+            border-color: var(--neon-color);
+            background: rgba(85,239,196,0.05);
+        }
+        .input-group label { 
+            display: block; 
+            margin-bottom: 12px; 
+            font-weight: bold; 
+            color: #a29bfe;
+            font-size: 1.1rem;
+        }
+        .input-group input { 
+            width: 100%; 
+            background: rgba(0,0,0,0.3); 
+            border: none; 
+            border-radius: 10px;
+            color: white; 
+            font-size: 1.3rem; 
+            outline: none; 
+            padding: 12px 15px;
+            font-family: 'Cairo', sans-serif;
+        }
+        .input-group input:focus { 
+            box-shadow: 0 0 0 2px var(--neon-color);
+        }
+        .input-group input:disabled { 
+            color: #636e72; 
+            cursor: not-allowed; 
+        }
 
-        /* الشات الجماعي */
-        .chat-box { background: #1e1e2e; border-radius: 15px; display: flex; flex-direction: column; height: 500px; border: 1px solid #34495e; }
-        #chat-messages { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.9rem; }
-        .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #34495e; }
-        .chat-input-area input { flex: 1; background: #2d3436; border: none; color: white; padding: 8px; border-radius: 5px; outline: none; }
+        .chat-box { 
+            background: rgba(30,30,50,0.8); 
+            border-radius: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100%;
+            min-height: 450px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-weight: bold;
+            color: #a29bfe;
+        }
+        #chat-messages { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 15px; 
+            font-size: 0.95rem; 
+        }
+        .chat-msg {
+            background: rgba(255,255,255,0.05);
+            padding: 8px 12px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .chat-input-area { 
+            display: flex; 
+            padding: 12px; 
+            border-top: 1px solid rgba(255,255,255,0.1);
+            gap: 10px;
+        }
+        .chat-input-area input { 
+            flex: 1; 
+            background: rgba(0,0,0,0.3); 
+            border: none; 
+            color: white; 
+            padding: 12px 15px; 
+            border-radius: 12px; 
+            outline: none;
+            font-family: 'Cairo', sans-serif;
+        }
+        .chat-input-area button {
+            background: var(--neon-color);
+            border: none;
+            padding: 12px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #000;
+        }
 
-        .stop-btn { grid-column: span 2; padding: 20px; background: var(--neon-color); color: #000; border: none; border-radius: 12px; font-size: 1.5rem; font-weight: 900; cursor: pointer; transition: 0.3s; }
-        .stop-btn:hover { transform: scale(1.02); box-shadow: 0 0 20px var(--neon-color); }
+        .stop-btn { 
+            grid-column: span 2; 
+            padding: 22px; 
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            color: white; 
+            border: none; 
+            border-radius: 18px; 
+            font-size: 1.4rem; 
+            font-weight: 900; 
+            cursor: pointer; 
+            transition: 0.3s;
+            font-family: 'Cairo', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .stop-btn:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 10px 30px rgba(108,92,231,0.4);
+        }
+        .stop-btn:disabled {
+            background: #636e72;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 900px) {
+            .game-container { grid-template-columns: 1fr; }
+            .inputs-grid { grid-template-columns: 1fr; }
+            .stop-btn { grid-column: span 1; }
+        }
     </style>
 </head>
 <body>
 
     <div class="game-header">
-        <div class="timer-box">الوقت: <span id="timer-display">{{ timer }}</span></div>
-        <div class="letter-box">الحرف: {{ letter }}</div>
-        <div class="score-box">لاعب: {{ user.username }}</div>
+        <div class="timer-box" id="timer-box">
+            <i class="fas fa-clock"></i> <span id="timer-display">{{ timer }}</span>
+        </div>
+        <div class="letter-box" id="letter-display">{{ letter }}</div>
+        <div class="player-box">
+            <i class="fas fa-user"></i>
+            <span>{{ user.username }}</span>
+        </div>
     </div>
 
     <div class="game-container">
         <div class="inputs-area">
             <div class="inputs-grid" id="game-fields">
-                <div class="input-group"><label>اسم ولد</label><input type="text" class="game-input" id="val-1" onpaste="return false;"></div>
-                <div class="input-group"><label>اسم بنت</label><input type="text" class="game-input" id="val-2" onpaste="return false;"></div>
-                <div class="input-group"><label>حيوان</label><input type="text" class="game-input" id="val-3" onpaste="return false;"></div>
-                <div class="input-group"><label>نبات</label><input type="text" class="game-input" id="val-4" onpaste="return false;"></div>
-                <div class="input-group"><label>بلاد</label><input type="text" class="game-input" id="val-5" onpaste="return false;"></div>
-                <div class="input-group"><label>جماد / ممثل</label><input type="text" class="game-input" id="val-6" onpaste="return false;"></div>
-                <button class="stop-btn" onclick="finishGame()">تم / إيقاف اللعبة!</button>
+                <div class="input-group">
+                    <label><i class="fas fa-male"></i> اسم ولد</label>
+                    <input type="text" class="game-input" id="val-1" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label><i class="fas fa-female"></i> اسم بنت</label>
+                    <input type="text" class="game-input" id="val-2" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label><i class="fas fa-paw"></i> حيوان</label>
+                    <input type="text" class="game-input" id="val-3" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label><i class="fas fa-leaf"></i> نبات</label>
+                    <input type="text" class="game-input" id="val-4" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label><i class="fas fa-globe"></i> بلاد</label>
+                    <input type="text" class="game-input" id="val-5" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label><i class="fas fa-cube"></i> جماد</label>
+                    <input type="text" class="game-input" id="val-6" autocomplete="off">
+                </div>
+                <button class="stop-btn" id="stopBtn" onclick="finishGame()">
+                    <i class="fas fa-check-circle"></i>
+                    <span>تم!</span>
+                </button>
             </div>
         </div>
 
         <div class="chat-box">
+            <div class="chat-header">
+                <i class="fas fa-comments"></i> دردشة اللاعبين
+            </div>
             <div id="chat-messages"></div>
             <div class="chat-input-area">
-                <input type="text" id="chat-msg" placeholder="اكتب لزمايلك...">
-                <button onclick="sendChat()" style="background:var(--neon-color); border:none; margin-right:5px; border-radius:5px; cursor:pointer;"><i class="fas fa-paper-plane"></i></button>
+                <input type="text" id="chat-msg" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter')sendChat()">
+                <button onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
     </div>
@@ -68,124 +258,225 @@
     <script>
         const socket = io();
         const lobbyId = "{{ lobby_id }}";
+        const myUsername = "{{ user.username }}";
         const urlParams = new URLSearchParams(window.location.search);
 
-        // 1. قراءة الحرف والوقت من الرابط أو من السيرفر
         const gameLetter = urlParams.get('letter') || "{{ letter }}" || "أ";
         let timeLeft = parseInt(urlParams.get('timer')) || parseInt(urlParams.get('time')) || parseInt("{{ timer }}") || 60;
+        let timerId;
+        let gameEnded = false;
 
-        // 2. تعريف المتغيرات (مرة واحدة فقط)
-        let timerId; 
-        const timerDisplay = document.getElementById('timer-display'); // السطر ده كان ناقص عندك
+        const timerDisplay = document.getElementById('timer-display');
+        const timerBox = document.getElementById('timer-box');
+        const letterDisplay = document.getElementById('letter-display');
 
-        // 3. تحديث الواجهة فوراً
-        if (document.querySelector('.letter-box')) {
-            document.querySelector('.letter-box').innerText = "الحرف: " + gameLetter;
-        }
-        if (timerDisplay) {
-            timerDisplay.innerText = timeLeft;
-        }
+        if (letterDisplay) letterDisplay.innerText = gameLetter;
+        if (timerDisplay) timerDisplay.innerText = timeLeft;
 
         socket.on('connect', () => {
             socket.emit('join_lobby', { room: lobbyId });
+            socket.emit('join_lobby', { room: "user_{{ user.id }}" });
         });
 
-        // 4. دالة تشغيل التايمر
         function startTimer() {
-            // لو فيه تايمر شغال قديم بنمسحه عشان ما يحصلش تداخل
             if (timerId) clearInterval(timerId);
 
             timerId = setInterval(() => {
+                if (gameEnded) {
+                    clearInterval(timerId);
+                    return;
+                }
+                
+                timeLeft--;
+                if (timerDisplay) timerDisplay.innerText = timeLeft;
+                
+                if (timeLeft <= 10) {
+                    timerBox.classList.add('warning');
+                }
+
                 if (timeLeft <= 0) {
                     clearInterval(timerId);
-                    finishGame(); 
-                } else {
-                    timeLeft--;
-                    if (timerDisplay) timerDisplay.innerText = timeLeft;
+                    timeUpFinish();
                 }
             }, 1000);
         }
 
-        // تشغيل التايمر أول ما الصفحة تحمل
-        window.onload = startTimer;
-
-        function finishGame() {
-            clearInterval(timerId); 
+        function timeUpFinish() {
+            if (gameEnded) return;
+            gameEnded = true;
+            
             const inputs = document.querySelectorAll('.game-input');
             let answers = [];
             inputs.forEach(input => {
                 input.disabled = true;
-                answers.push(input.value);
+                answers.push(input.value || "");
             });
+            
+            document.getElementById('stopBtn').disabled = true;
 
-            socket.emit('player_finished', { 
-                lobby_id: lobbyId, 
-                username: "{{ user.username }}", 
+            socket.emit('time_up', {
+                lobby_id: lobbyId,
+                username: myUsername,
                 answers: answers,
-                letter: gameLetter 
+                letter: gameLetter
+            });
+        }
+
+        function finishGame() {
+            if (gameEnded) return;
+            gameEnded = true;
+            clearInterval(timerId);
+
+            const inputs = document.querySelectorAll('.game-input');
+            let answers = [];
+            inputs.forEach(input => {
+                input.disabled = true;
+                answers.push(input.value || "");
+            });
+            
+            document.getElementById('stopBtn').disabled = true;
+
+            socket.emit('player_finished', {
+                lobby_id: lobbyId,
+                username: myUsername,
+                answers: answers,
+                letter: gameLetter,
+                time_up: false
             });
         }
 
         socket.on('stop_game_for_all', (data) => {
-            alert("اللعبة توقفت! " + data.winner + " خلص الأول.");
+            if (gameEnded) return;
+            gameEnded = true;
             clearInterval(timerId);
             document.querySelectorAll('.game-input').forEach(i => i.disabled = true);
+            document.getElementById('stopBtn').disabled = true;
         });
 
-        // --- كود الشات و النتائج يكمل هنا زي ما هو عندك ---
+        socket.on('game_ended', (data) => {
+            if (gameEnded) return;
+            gameEnded = true;
+            clearInterval(timerId);
+            document.querySelectorAll('.game-input').forEach(i => i.disabled = true);
+            document.getElementById('stopBtn').disabled = true;
+        });
+
+        socket.on('show_results', (data) => {
+            showResultsPage(data.leaderboard);
+        });
+
+        function showResultsPage(leaderboard) {
+            let rows = "";
+            leaderboard.forEach((player, index) => {
+                let medal = "";
+                let borderColor = "rgba(255,255,255,0.1)";
+                let bgColor = "rgba(255,255,255,0.03)";
+                
+                if (index === 0) { 
+                    medal = '<span style="font-size: 2rem;">🥇</span>'; 
+                    borderColor = "#f1c40f";
+                    bgColor = "rgba(241,196,15,0.1)";
+                }
+                else if (index === 1) { 
+                    medal = '<span style="font-size: 1.8rem;">🥈</span>'; 
+                    borderColor = "#bdc3c7";
+                    bgColor = "rgba(189,195,199,0.1)";
+                }
+                else if (index === 2) { 
+                    medal = '<span style="font-size: 1.6rem;">🥉</span>'; 
+                    borderColor = "#cd7f32";
+                    bgColor = "rgba(205,127,50,0.1)";
+                }
+                
+                let isMe = player[0] === myUsername;
+                
+                rows += `
+                    <div style="display: flex; align-items: center; justify-content: space-between; 
+                                background: ${isMe ? 'rgba(108,92,231,0.2)' : bgColor}; 
+                                padding: 18px 25px; border-radius: 15px; margin-bottom: 12px; 
+                                border: 2px solid ${isMe ? '#6c5ce7' : borderColor};">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            ${medal || `<span style="font-size: 1.3rem; color: rgba(255,255,255,0.5);">#${index + 1}</span>`}
+                            <span style="font-size: 1.2rem; font-weight: bold;">${player[0]}</span>
+                            ${isMe ? '<span style="background: #6c5ce7; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem;">انت</span>' : ''}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #55efc4; font-size: 1.5rem; font-weight: 900;">+${player[1]}</span>
+                            <span style="color: rgba(255,255,255,0.5);">نقطة</span>
+                        </div>
+                    </div>`;
+            });
+
+            const statsHTML = `
+                <div id="stats-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                     background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); 
+                     z-index: 99999; display: flex; flex-direction: column; align-items: center; 
+                     justify-content: center; padding: 30px; direction: rtl; overflow-y: auto;">
+                    
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <i class="fas fa-trophy" style="font-size: 4rem; color: #f1c40f; margin-bottom: 15px;"></i>
+                        <h1 style="background: linear-gradient(135deg, #f1c40f 0%, #e67e22 100%); 
+                                   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                                   font-size: 2.5rem; margin: 0;">انتهت اللعبة!</h1>
+                    </div>
+                    
+                    <div style="width: 100%; max-width: 550px; background: rgba(30,30,50,0.8); 
+                                padding: 30px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1);
+                                backdrop-filter: blur(10px);">
+                        <h3 style="text-align: center; margin: 0 0 25px 0; color: #a29bfe;">
+                            <i class="fas fa-chart-bar"></i> النتائج النهائية
+                        </h3>
+                        ${rows}
+                    </div>
+                    
+                    <div style="margin-top: 30px; text-align: center;">
+                        <p style="color: rgba(255,255,255,0.6); margin-bottom: 15px;">
+                            العودة التلقائية خلال <span id="back-timer" style="color: #ff7675; font-weight: bold; font-size: 1.3rem;">10</span> ثوانٍ
+                        </p>
+                        <button onclick="window.location.href='/dashboard'" 
+                                style="padding: 15px 40px; background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); 
+                                       color: white; border: none; border-radius: 15px; cursor: pointer; 
+                                       font-weight: bold; font-size: 1.1rem; font-family: 'Cairo', sans-serif;
+                                       box-shadow: 0 10px 30px rgba(108,92,231,0.4); transition: 0.3s;">
+                            <i class="fas fa-home"></i> العودة للرئيسية
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', statsHTML);
+
+            let backTime = 10;
+            let backInterval = setInterval(() => {
+                backTime--;
+                const timerEl = document.getElementById('back-timer');
+                if (timerEl) timerEl.innerText = backTime;
+
+                if (backTime <= 0) {
+                    clearInterval(backInterval);
+                    window.location.href = '/dashboard';
+                }
+            }, 1000);
+        }
+
         function sendChat() {
-            const msg = document.getElementById('chat-msg').value;
-            if(msg) {
-                socket.emit('game_chat', { room: lobbyId, user: "{{ user.username }}", message: msg });
-                document.getElementById('chat-msg').value = '';
+            const msgInput = document.getElementById('chat-msg');
+            const msg = msgInput.value.trim();
+            if (msg) {
+                socket.emit('game_chat', { room: lobbyId, user: myUsername, message: msg });
+                msgInput.value = '';
             }
         }
 
         socket.on('receive_game_chat', (data) => {
             const div = document.createElement('div');
-            div.innerHTML = `<b>${data.user}:</b> ${data.message}`;
+            div.className = 'chat-msg';
+            div.innerHTML = `<b style="color: #a29bfe;">${data.user}:</b> ${data.message}`;
             document.getElementById('chat-messages').appendChild(div);
             document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
         });
 
-        socket.on('show_results', (data) => {
-                let rows = "";
-                data.leaderboard.forEach((player, index) => {
-                    let medal = index === 0 ? "🥇" : (index === 1 ? "🥈" : (index === 2 ? "🥉" : ""));
-                    rows += `
-                        <div style="display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid ${index === 0 ? '#f1c40f' : '#34495e'}">
-                            <span>${medal} المركز ${index + 1} - ${player[0]}</span>
-                            <span style="color: #55efc4; font-weight: bold;">${player[1]} نقطة</span>
-                        </div>`;
-                });
-
-                const statsHTML = `
-                    <div id="stats-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0f1b; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; direction: rtl;">
-                        <h1 style="color: #f1c40f; margin-bottom: 30px;">إحصائيات الجيم 📊</h1>
-                        <div style="width: 100%; max-width: 500px; background: #1e1e2e; padding: 20px; border-radius: 20px; border: 2px solid #55efc4;">
-                            ${rows}
-                        </div>
-                        <p style="margin-top: 20px;">سيتم العودة للرئيسية خلال <span id="back-timer" style="color:#ff7675; font-weight:bold;">10</span> ثوانٍ...</p>
-                        <button onclick="window.location.href='/dashboard'" style="margin-top: 10px; padding: 12px 30px; background: #6c5ce7; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">العودة الآن</button>
-                    </div>
-                `;
-
-                document.body.insertAdjacentHTML('beforeend', statsHTML);
-
-                let backTime = 10;
-                let backInterval = setInterval(() => {
-                    backTime--;
-                    const timerEl = document.getElementById('back-timer');
-                    if(timerEl) timerEl.innerText = backTime;
-
-                    if (backTime <= 0) {
-                        clearInterval(backInterval);
-                        window.location.href = '/dashboard';
-                    }
-                }, 1000);
-            });
-
-            // 3. باقي الـ Listeners مثل الشات وغيره...
-        </script>
+        window.onload = startTimer;
+    </script>
 </body>
 </html>
