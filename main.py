@@ -33,19 +33,28 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    level = db.Column(db.Integer, default=1)
-    points = db.Column(db.Integer, default=0)
+    points = db.Column(db.Integer, default=0) # إجمالي النقاط
     is_blocked = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
-    bio = db.Column(db.String(200), default="لاعب جديد في FamilyGame") # هل دي كانت موجودة؟
-    avatar = db.Column(db.String(200), default="default.png") # وهل دي؟
-    
+    bio = db.Column(db.String(200), default="لاعب جديد في FamilyGame")
+    avatar = db.Column(db.String(200), default="default.png")
+
+    # دالة ذكية: كل ما ننده على user.level تحسبه فوراً من النقاط
+    @property
+    def level(self):
+        # 0-500 = Level 1
+        # 501-1000 = Level 2
+        # المعادلة: النقاط قسمة 500 ونزود 1
+        return (self.points // 500) + 1
+
+    @property
+    def progress_to_next_level(self):
+        return (self.points % 500) / 5
+
     @property
     def is_online(self):
         if self.last_seen:
-            now = datetime.utcnow()
-            duration = (now - self.last_seen).total_seconds()
-            return duration < 60
+            return (datetime.utcnow() - self.last_seen).total_seconds() < 300
         return False
     
 class Friend(db.Model):
@@ -356,11 +365,9 @@ def profile(user_id):
 
 @app.before_request
 def update_last_seen():
-    if 'user_id' in session:
-        user = db.session.get(User, session['user_id'])
-        if user:
-            user.last_seen = datetime.utcnow()
-            db.session.commit()
+    if current_user.is_authenticated:
+        current_user.last_seen = datetime.utcnow()
+        db.session.commit()
 
 @app.context_processor
 def inject_unread_count():
@@ -463,10 +470,12 @@ def delete_chat(friend_id):
 
 @socketio.on('connect')
 def handle_connect():
-    # هنا بنربط اسم المستخدم بالـ ID بتاع الاتصال بتاعه
-    # user_id = current_user.id (لو بتستخدم Flask-Login)
-    # online_users[user_id] = request.sid
-    print("لاعب جديد اتصل بالسيستم")
+    if current_user.is_authenticated:
+        current_user.last_seen = datetime.utcnow()
+        db.session.commit()
+        # مهم جداً: انضمام اللاعب لغرفته الخاصة عشان يستقبل دعوات
+        join_room(f"user_{current_user.id}")
+        print(f"اللاعب {current_user.username} اتصل وحدثنا وقته")
 
 @socketio.on('send_invite')
 def handle_invite(data):
@@ -583,6 +592,7 @@ def game_page(lobby_id):
 def handle_game_chat(data):
     emit('receive_game_chat', data, room=data['room'])
 
+
 @socketio.on('player_finished')
 def handle_finish(data):
     lobby_id = data['lobby_id']
@@ -599,11 +609,45 @@ def handle_finish(data):
 
     game_results[lobby_id]['players'][username] = answers
 
+    # لو اللاعب داس "تم" قبل الوقت ما يخلص، نوقف الجيم عند الكل
     if not is_time_up:
         emit('stop_game_for_all', {'winner': username}, room=lobby_id)
-    
+
     game_results[lobby_id]['ended'] = True
+
+    # استدعاء دالة الحساب وتوزيع الجوائز
     calculate_scores(lobby_id)
+
+def calculate_scores(lobby_id):
+    results = game_results.get(lobby_id)
+    if not results:
+        return
+
+    leaderboard = []
+
+    # اللف على كل اللاعبين اللي بعتوا إجاباتهم
+    for username, answers in results['players'].items():
+        # 1. حساب نقاط الجيم الحالي بناءً على الحرف والإجابات
+        score_this_game = calculate_actual_points(answers, results['letter'])
+
+        # 2. تحديث قاعدة البيانات (إضافة النقاط للحساب الدائم)
+        user = User.query.filter_by(username=username).first()
+        if user:
+            user.points += score_this_game
+            db.session.commit() # حفظ النقاط الجديدة للأبد
+            print(f"User {username} updated: +{score_this_game} pts (Total: {user.points}, Level: {user.level})")
+
+        leaderboard.append((username, score_this_game))
+
+    # ترتيب الأوائل (من الأعلى للأقل)
+    leaderboard.sort(key=lambda x: x[1], reverse=True)
+
+    # إرسال النتائج النهائية لكل اللاعبين في اللوبي
+    socketio.emit('show_results', {'leaderboard': leaderboard}, room=lobby_id)
+
+    # تنظيف الذاكرة بعد انتهاء الجيم
+    if lobby_id in game_results:
+        del game_results[lobby_id]
 
 @socketio.on('time_up')
 def handle_time_up(data):
