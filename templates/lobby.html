@@ -373,6 +373,7 @@
         });
 
         socket.on('redirect_to_game', function(data) {
+            // توحيد الاسم ليكون timer والحرف letter
             window.location.href = `/game/${data.lobby_id}?timer=${data.timer}&letter=${data.letter}`;
         });
 
@@ -389,10 +390,12 @@
         }
 
         function startGame() {
-            const selectedTimer = document.getElementById('gameTimer').value; // الـ Select اللي فيه 60, 90, 120
+            const timerSelect = document.getElementById('gameTimer'); // تأكد إن ده الـ ID بتاع القائمة
+            const selectedTimer = timerSelect.value; 
+
             socket.emit('start_game_event', {
                 lobby_id: lobby_id,
-                timer: selectedTimer
+                timer: selectedTimer // هنا بنبعت الـ 90 أو الـ 120
             });
         }
 
@@ -456,10 +459,6 @@
         socket.on('you_were_kicked', function() {
             alert("تم إزالتك من الغرفة بواسطة المضيف");
             window.location.href = "/dashboard";
-        });
-
-        socket.on('redirect_to_game', function(data) {
-            window.location.href = "/game/" + data.lobby_id + "?time=" + data.timer;
         });
 
         socket.on('receive_invite', function(data) {

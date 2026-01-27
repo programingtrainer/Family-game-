@@ -524,15 +524,17 @@ def handle_player_joined_lobby(data):
 @socketio.on('start_game_event')
 def handle_start_game(data):
     lobby_id = data['lobby_id']
-    timer_value = data['timer'] # الوقت اللي أنت حددته (مثلاً 60 ثانية)
+    # هنا بنسحب الوقت اللي أنت اخترته من الـ Select box في اللوبي
+    selected_timer = data.get('timer', 60) 
 
-    # اختيار حرف عشوائي للجولة الأولى
-    selected_letter = random.choice(ARABIC_LETTERS)
+    # اختيار حرف عشوائي فعلاً
+    letters = ['أ', 'ب', 'ت', 'ج', 'ح', 'خ', 'د', 'ر', 'ز', 'س', 'ش', 'ص', 'ط', 'ع', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'هـ', 'و', 'ي']
+    selected_letter = random.choice(letters)
 
-    # إرسال أمر البدء لكل اللاعبين في الغرفة
+    # نبعت البيانات للكل
     emit('redirect_to_game', {
         'lobby_id': lobby_id,
-        'timer': timer_value,
+        'timer': selected_timer,
         'letter': selected_letter
     }, room=lobby_id)
 
@@ -607,37 +609,56 @@ def calculate_scores(lobby_id, current_letter):
     if lobby_id not in game_results:
         return
 
-    all_players_data = game_results[lobby_id]
-    final_scores = {user: 0 for user in all_players_data.keys()}
+    all_players = game_results[lobby_id]
+    # مصفوفة لتخزين النتائج النهائية
+    scores_summary = {}
 
-    # بنلف على الـ 6 خانات (ولد، بنت، حيوان، إلخ)
-    for i in range(6):
-        category_answers = []
+    for username, answers in all_players.items():
+        total_p = 0
+        for i in range(len(answers)):
+            ans = answers[i].strip()
 
-        # تجميع الكلمات اللي بتبدأ بالحرف الصح بس
-        for user in all_players_data:
-            ans = all_players_data[user][i].strip()
-            if ans and ans.startswith(current_letter):
-                category_answers.append(ans)
+            # 1. التأكد من الحرف
+            if ans.startswith(current_letter):
+                # 2. التأكد من التكرار (نجمع كل إجابات اللاعبين في نفس الخانة)
+                all_ans_in_cat = [p_ans[i].strip() for p_ans in all_players.values()]
 
-        # توزيع الـ 10 والـ 5
-        for user in all_players_data:
-            user_ans = all_players_data[user][i].strip()
-
-            if not user_ans or not user_ans.startswith(current_letter):
-                points = 0
-            elif category_answers.count(user_ans) > 1:
-                points = 5  # متكررة
+                if all_ans_in_cat.count(ans) > 1:
+                    total_p += 5  # متشابه
+                else:
+                    total_p += 10 # فريد
             else:
-                points = 10 # فريدة
+                total_p += 0 # حرف غلط أو فاضي
 
-            final_scores[user] += points
+        scores_summary[username] = total_p
 
-    # إرسال النتائج النهائية للكل في اللوبي
-    emit('show_results', {'scores': final_scores}, room=lobby_id)
+    # تحويل النتائج لشكل "Leaderboard" (قائمة مرتبة) عشان الـ JS اللي عندك
+    leaderboard = sorted(scores_summary.items(), key=lambda x: x[1], reverse=True)
 
-    # مسح الذاكرة للجولة الجاية
-    del game_results[lobby_id]
+    # إرسال النتيجة للكل
+    emit('show_results', {'leaderboard': leaderboard}, room=lobby_id)
+
+    # --- الجزء الأهم: إضافة النقاط لليوزر في قاعدة البيانات ---
+    for username, points in final_scores.items():
+        player = User.query.filter_by(username=username).first()
+        if player:
+            player.points += points # تحديث نقاط اللاعب الدائمة
+    db.session.commit()
+
+    # ترتيب المراكز (من الأعلى للأقل)
+    leaderboard = sorted(final_scores.items(), key=lambda x: x[1], reverse=True)
+    # إرسال النتيجة النهائية
+    emit('show_results', {'leaderboard': leaderboard}, room=lobby_id)
+
+    # تنظيف الذاكرة
+    if lobby_id in game_results:
+        del game_results[lobby_id]
+
+@socketio.on('redirect_to_game')
+def redirect_to_game(data):
+    # التأكد من إرسال التايمر كـ Parameter في الرابط
+    target_url = f"/game/{data['lobby_id']}?timer={data['timer']}&letter={data['letter']}"
+    emit('redirect_to_game_url', {'url': target_url}, room=data['lobby_id'])
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=True, log_output=True)
