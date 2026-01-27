@@ -44,6 +44,12 @@ Preferred communication style: Simple, everyday language.
 - Redesigned dashboard with modern card-based layout and notification dropdown
 - Fixed Socket.IO room management for lobbies and personal notifications
 - Added join_lobby route for accepting game invitations
+- Complete game system with auto-end when timer expires
+- Game results page showing rankings, usernames, and points earned
+- 10-second auto-redirect to dashboard after game ends
+- Points automatically added to players based on scoring (10 for unique, 5 for duplicate answers)
+- Level up system when points reach threshold
+- Support for multiple players in same game
 
 ### Design Patterns
 - Session-based authentication with Flask-Login
