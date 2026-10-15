@@ -1,24 +1,46 @@
 import os
 import random
+import threading
+import unicodedata
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, delete, select
 from datetime import datetime
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
 import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import send_from_directory
 
-ARABIC_LETTERS = ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'هـ', 'و', 'ي']
+ARABIC_LETTERS = ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي']
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'FamilyGame_Secret_123'
+app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET') or os.urandom(32)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///familygame_vFinal.db'
-socketio = SocketIO(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
 
-game_results = {}
+def _socket_allowed_origins():
+    origins = {'http://localhost:5000', 'http://127.0.0.1:5000'}
+    domains = set()
+    for variable in ('REPLIT_DEV_DOMAIN', 'REPLIT_DOMAINS'):
+        for value in os.environ.get(variable, '').split(','):
+            domain = value.strip().lower()
+            domain = domain.removeprefix('https://').removeprefix('http://')
+            domain = domain.split('/', 1)[0].split(':', 1)[0].rstrip('.')
+            if domain:
+                domains.add(domain)
+    for domain in domains:
+        origins.add(f'https://{domain}')
+        origins.add(f'https://{domain}:8080')
+    return sorted(origins)
+
+socketio = SocketIO(app, cors_allowed_origins=_socket_allowed_origins())
+
+# Socket.IO state is held in memory for this single-process SQLite application.
+lobby_rooms = {}
+active_user_sids = {}
+socket_user_ids = {}
+state_lock = threading.RLock()
 
 db = SQLAlchemy(app)
 
@@ -33,18 +55,19 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    points = db.Column(db.Integer, default=0) # إجمالي النقاط
+    points = db.Column(db.Integer, default=0)
     is_blocked = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     bio = db.Column(db.String(200), default="لاعب جديد في FamilyGame")
     avatar = db.Column(db.String(200), default="default.png")
+    is_online_status = db.Column(db.Boolean, default=False)
 
-    # دالة ذكية: كل ما ننده على user.level تحسبه فوراً من النقاط
+    # التعديل هنا: استخدمنا back_populates بدل backref لمنع التداخل
+    sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', back_populates='sender', cascade='all, delete-orphan')
+    received_messages = db.relationship('Message', foreign_keys='Message.receiver_id', back_populates='receiver', cascade='all, delete-orphan')
+
     @property
     def level(self):
-        # 0-500 = Level 1
-        # 501-1000 = Level 2
-        # المعادلة: النقاط قسمة 500 ونزود 1
         return (self.points // 500) + 1
 
     @property
@@ -53,9 +76,7 @@ class User(UserMixin, db.Model):
 
     @property
     def is_online(self):
-        if self.last_seen:
-            return (datetime.utcnow() - self.last_seen).total_seconds() < 300
-        return False
+        return bool(self.is_online_status)
     
 class Friend(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -75,15 +96,16 @@ class Message(db.Model):
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.String(500), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    is_read = db.Column(db.Boolean, default=False) # عشان العلامة الحمراء زي واتساب
+    is_read = db.Column(db.Boolean, default=False)
 
-    # علاقات عشان نجيب بيانات المرسل والمستقبل بسهولة
-    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
-    receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_messages')
+    # التعديل هنا: نربطها بـ back_populates لتتناسب مع كلاس User
+    sender = db.relationship('User', foreign_keys=[sender_id], back_populates='sent_messages')
+    receiver = db.relationship('User', foreign_keys=[receiver_id], back_populates='received_messages')
 
-# إنشاء قاعدة البيانات بالحقول الجديدة
 with app.app_context():
     db.create_all()
+    User.query.update({User.is_online_status: False})
+    db.session.commit()
 
 # --- Routes الأصدقاء ---
 
@@ -108,11 +130,31 @@ def friends():
 def add_friend(friend_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    exists = Friend.query.filter_by(user_id=session['user_id'], friend_id=friend_id).first()
-    if not exists:
-        new_friend = Friend(user_id=session['user_id'], friend_id=friend_id)
-        db.session.add(new_friend)
-        db.session.commit()
+    sender_id = session['user_id']
+    if sender_id == friend_id:
+        flash("لا يمكنك إرسال طلب صداقة لنفسك")
+        return redirect(url_for('friends'))
+    target = db.session.get(User, friend_id)
+    if not target:
+        flash("هذا المستخدم غير موجود")
+        return redirect(url_for('friends'))
+
+    existing = Friend.query.filter(
+        ((Friend.user_id == sender_id) & (Friend.friend_id == friend_id)) |
+        ((Friend.user_id == friend_id) & (Friend.friend_id == sender_id))
+    ).first()
+    if existing:
+        flash("طلب الصداقة موجود بالفعل أو أنكما صديقان")
+        return redirect(url_for('friends'))
+
+    new_friend = Friend(user_id=sender_id, friend_id=friend_id, status='pending')
+    db.session.add(new_friend)
+    db.session.commit()
+    sender = db.session.get(User, sender_id)
+    socketio.emit('friend_request', {
+        'request_id': new_friend.id,
+        'from_username': sender.username
+    }, room=f"user_{friend_id}")
     return redirect(url_for('friends'))
 
 # --- Routes الدخول والتسجيل ---
@@ -241,18 +283,6 @@ def change_password():
     db.session.commit()
     return render_template('settings.html', success="تم التغيير ✅", user=user)
 
-@app.route('/delete_account')
-def delete_account():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    user = db.session.get(User, session['user_id'])
-    if user:
-        Friend.query.filter((Friend.user_id == user.id) | (Friend.friend_id == user.id)).delete()
-        db.session.delete(user)
-        db.session.commit()
-        session.clear()
-    return redirect(url_for('welcome'))
-
 # --- لوحة التحكم (gatapro901) ---
 
 @app.route('/admin_panel')
@@ -278,16 +308,47 @@ def toggle_block(user_id):
         db.session.commit()
     return redirect(url_for('admin_panel'))
 
+# دالة حذف المستخدم من لوحة التحكم (للأدمن)
 @app.route('/admin_delete_user/<int:user_id>')
 def admin_delete_user(user_id):
-    admin = db.session.get(User, session.get('user_id'))
-    if not admin or admin.username != 'gatapro901':
-        return "Unauthorized", 403
-    target = db.session.get(User, user_id)
-    if target:
-        db.session.delete(target)
+    # نستخدم get_or_404 لضمان وجود المستخدم
+    user = User.query.get_or_404(user_id)
+
+    try:
+        # 1. حذف كافة رسائل المستخدم أولاً
+        Message.query.filter((Message.sender_id == user_id) | (Message.receiver_id == user_id)).delete()
+
+        # 2. الآن نحذف المستخدم نفسه
+        db.session.delete(user)
         db.session.commit()
-    return redirect(url_for('admin_panel'))
+        # رجعنا لاسم الدالة 'dashboard' زي ما الـ Debugger اقترح
+        return redirect(url_for('admin_panel'))
+
+    except Exception as e:
+        db.session.rollback()
+        # لازم السطر ده كمان يكون جوه الـ except بمحاذاة الـ rollback
+        return f"حدث خطأ: {e}"
+
+# دالة حذف الحساب (للمستخدم نفسه من الإعدادات)
+@app.route('/delete_account')
+@login_required
+def delete_account():
+    user_id = current_user.id
+    user = User.query.get(user_id)
+
+    try:
+        # 1. تنظيف الرسائل
+        Message.query.filter((Message.sender_id == user_id) | (Message.receiver_id == user_id)).delete()
+
+        # 2. حذف الحساب
+        db.session.delete(user)
+        db.session.commit()
+
+        logout_user()
+        return redirect(url_for('welcome'))
+    except Exception as e:
+        db.session.rollback()
+        return f"حدث خطأ: {e}"
 
 @app.route('/leaderboard')
 def leaderboard():
@@ -308,24 +369,28 @@ def accept_friend(request_id):
     if 'user_id' not in session: return redirect(url_for('login'))
 
     req = db.session.get(Friend, request_id)
-    if req and req.friend_id == session['user_id']:
-        # 1. تحديث حالة الطلب الأصلي
+    if req and req.friend_id == session['user_id'] and req.status == 'pending':
         req.status = 'accepted'
 
-        # 2. إنشاء علاقة عكسية عشان الطرفين يشوفوا بعض (مهم جداً)
-        reverse_friend = Friend(user_id=session['user_id'], friend_id=req.user_id, status='accepted')
-        db.session.add(reverse_friend)
+        reverse_exists = Friend.query.filter_by(
+            user_id=session['user_id'], friend_id=req.user_id, status='accepted'
+        ).first()
+        if not reverse_exists:
+            db.session.add(Friend(
+                user_id=session['user_id'],
+                friend_id=req.user_id,
+                status='accepted'
+            ))
 
-        # 3. إرسال الإشعار للشخص اللي بعت الطلب (req.user_id)
-        # احنا هنا بنقول: يا قاعدة بيانات، حطي رسالة في جرس الشخص اللي "بدأ" الإضافة
         new_note = Notification(
-            user_id=req.user_id, 
-            message=f"وافق {session['username']} على طلب صداقتك 🎉"
+            user_id=req.user_id,
+            message=f"وافق {session.get('username', 'صديقك')} على طلب صداقتك"
         )
         db.session.add(new_note)
-
-        # 4. حفظ كل التغييرات في خطوة واحدة
         db.session.commit()
+        socketio.emit('friend_accepted', {
+            'username': session.get('username', 'صديقك')
+        }, room=f"user_{req.user_id}")
 
     return redirect(url_for('dashboard'))
 
@@ -365,9 +430,11 @@ def profile(user_id):
 
 @app.before_request
 def update_last_seen():
-    if current_user.is_authenticated:
-        current_user.last_seen = datetime.utcnow()
-        db.session.commit()
+    if current_user.is_authenticated and request.endpoint != 'static':
+        now = datetime.utcnow()
+        if not current_user.last_seen or (now - current_user.last_seen).total_seconds() >= 30:
+            current_user.last_seen = now
+            db.session.commit()
 
 @app.context_processor
 def inject_unread_count():
@@ -421,17 +488,32 @@ def chat(friend_id):
 
     return render_template('chat.html', friend=friend, messages=messages)
 
-@app.route('/send_message/<int:receiver_id>', methods=['POST'])
-def send_message(receiver_id):
-    if 'user_id' not in session: return redirect('/login')
+@socketio.on('send_message')
+def handle_send_message(data):
+    if not isinstance(data, dict):
+        return
+    sender_id = session.get('user_id')
+    try:
+        receiver_id = int(data.get('receiver_id'))
+    except (TypeError, ValueError):
+        return
+    content = (data.get('content') or '').strip()[:500]
+    if not sender_id or sender_id == receiver_id or not content or not db.session.get(User, receiver_id):
+        return
 
-    content = request.form.get('content')
-    if content:
-        new_msg = Message(sender_id=session['user_id'], receiver_id=receiver_id, content=content)
-        db.session.add(new_msg)
-        db.session.commit()
-
-    return redirect(f'/chat/{receiver_id}')
+    new_msg = Message(sender_id=sender_id, receiver_id=receiver_id, content=content)
+    db.session.add(new_msg)
+    db.session.commit()
+    msg_data = {
+        'id': new_msg.id,
+        'content': content,
+        'sender_id': sender_id,
+        'receiver_id': receiver_id,
+        'sender_name': db.session.get(User, sender_id).username,
+        'timestamp': new_msg.timestamp.strftime('%I:%M %p')
+    }
+    socketio.emit('receive_message', msg_data, room=f"user_{receiver_id}")
+    socketio.emit('receive_message', msg_data, room=f"user_{sender_id}")
 
 # 1. حذف رسالة معينة
 @app.route('/delete_message/<int:message_id>')
@@ -469,258 +551,509 @@ def delete_chat(friend_id):
     return redirect('/inbox')
 
 @socketio.on('connect')
-def handle_connect():
-    if current_user.is_authenticated:
-        current_user.last_seen = datetime.utcnow()
+def handle_connect(auth=None):
+    user_id = session.get('user_id')
+    user = db.session.get(User, user_id) if user_id else None
+    if not user or user.is_blocked:
+        return False
+
+    user.is_online_status = True
+    user.last_seen = datetime.utcnow()
+    db.session.commit()
+    with state_lock:
+        socket_user_ids[request.sid] = user.id
+        active_user_sids.setdefault(user.id, set()).add(request.sid)
+    join_room(f"user_{user.id}")
+    socketio.emit('friend_status_change', {'user_id': user.id, 'online': True})
+
+
+@socketio.on('disconnect')
+def handle_disconnect(reason=None):
+    with state_lock:
+        user_id = socket_user_ids.pop(request.sid, None)
+        if not user_id:
+            return
+        sids = active_user_sids.get(user_id, set())
+        sids.discard(request.sid)
+        if sids:
+            return
+        active_user_sids.pop(user_id, None)
+    user = db.session.get(User, user_id)
+    if user:
+        user.is_online_status = False
+        user.last_seen = datetime.utcnow()
         db.session.commit()
-        # مهم جداً: انضمام اللاعب لغرفته الخاصة عشان يستقبل دعوات
-        join_room(f"user_{current_user.id}")
-        print(f"اللاعب {current_user.username} اتصل وحدثنا وقته")
+    socketio.emit('friend_status_change', {'user_id': user_id, 'online': False})
+
+
+@socketio.on('presence_heartbeat')
+def handle_presence_heartbeat():
+    user_id = session.get('user_id')
+    user = db.session.get(User, user_id) if user_id else None
+    if user:
+        user.last_seen = datetime.utcnow()
+        user.is_online_status = True
+        db.session.commit()
+
 
 @socketio.on('send_invite')
 def handle_invite(data):
-    # التأكد من أن target_id يصل كـ string أو int حسب قاعدة بياناتك
-    target_friend_id = data['target_id']
-    sender_name = data['sender_name']
-    lobby_id = data['lobby_id']
+    if not isinstance(data, dict):
+        return
+    sender_id = session.get('user_id')
+    lobby_id = str(data.get('lobby_id', ''))
+    try:
+        target_id = int(data.get('target_id'))
+    except (TypeError, ValueError):
+        emit('invite_error', {'message': 'تعذر إرسال الدعوة'})
+        return
 
-    # إرسال التنبيه لغرفة المستخدم المستهدف فقط
-    emit('receive_invite', {
-        'sender_name': sender_name,
+    friendship = Friend.query.filter_by(
+        user_id=sender_id, friend_id=target_id, status='accepted'
+    ).first()
+    target = db.session.get(User, target_id)
+    sender = db.session.get(User, sender_id) if sender_id else None
+    if not sender or not target or not friendship or sender_id == target_id:
+        emit('invite_error', {'target_id': target_id, 'message': 'يمكن دعوة الأصدقاء فقط'})
+        return
+    if not target.is_online:
+        emit('invite_error', {'target_id': target_id, 'message': 'الصديق غير متصل الآن'})
+        return
+
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        if not room or room['host_id'] != sender_id or room['state'] != 'waiting':
+            emit('invite_error', {'target_id': target_id, 'message': 'الغرفة غير متاحة للدعوة'})
+            return
+        if target_id in room['players'] or target_id in room['invited_ids']:
+            emit('invite_error', {'target_id': target_id, 'message': 'تمت دعوة هذا اللاعب بالفعل'})
+            return
+        room['invited_ids'].add(target_id)
+
+    socketio.emit('receive_invite', {
+        'sender_name': sender.username,
         'lobby_id': lobby_id
-    }, room=f"user_{target_friend_id}")
+    }, room=f"user_{target_id}")
+    emit('invite_sent', {'target_id': target_id})
 
-@socketio.on('accept_invite')
-def handle_accept(data):
-    lobby_id = data['lobby_id']
-    username = data['username'] # اسم الصديق اللي وافق
 
-    # نبعث لكل اللي في الأوضة إن فيه بطل جديد انضم
-    emit('player_joined', {'username': username}, room=lobby_id)
+def _safe_answers(raw_answers):
+    if not isinstance(raw_answers, list):
+        return [''] * 6
+    return [str(answer or '').strip()[:80] for answer in raw_answers[:6]] + [''] * max(0, 6 - len(raw_answers))
+
+
+def _normalize_arabic(value):
+    value = unicodedata.normalize('NFKC', str(value or '')).casefold()
+    value = ''.join(char for char in value if char != '\u0640' and not unicodedata.combining(char))
+    return value.translate(str.maketrans({'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ٱ': 'ا'}))
+
+
+def _score_round(players_answers, letter):
+    scores = {}
+    normalized_letter = _normalize_arabic(letter)
+    for player_id, player_data in players_answers.items():
+        answers = player_data['answers']
+        total = 0
+        for category_index, answer in enumerate(answers):
+            normalized = _normalize_arabic(answer)
+            if not normalized or normalized[0] != normalized_letter:
+                continue
+            duplicate_count = sum(
+                1 for other in players_answers.values()
+                if category_index < len(other['answers'])
+                and other['answers'][category_index]
+                and _normalize_arabic(other['answers'][category_index]) == normalized
+            )
+            total += 5 if duplicate_count > 1 else 10
+        scores[player_id] = total
+    return scores
+
+
+def _finish_round(lobby_id, game_token):
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        game = room.get('game') if room else None
+        if not game or game['token'] != game_token or game['status'] == 'finished':
+            return
+        participants = dict(game['participants'])
+        answers = dict(game['answers'])
+        for player_id, username in participants.items():
+            answers.setdefault(player_id, {'username': username, 'answers': [''] * 6})
+        game['status'] = 'finished'
+        game['answers'] = answers
+
+    scores = _score_round(answers, game['letter'])
+    leaderboard = []
+    with app.app_context():
+        try:
+            for player_id, points in scores.items():
+                player = db.session.get(User, player_id)
+                if player:
+                    player.points = (player.points or 0) + points
+                    leaderboard.append([player.username, points])
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Could not save game scores for lobby %s", lobby_id)
+            leaderboard = [[answers[player_id]['username'], points] for player_id, points in scores.items()]
+
+    leaderboard.sort(key=lambda row: (-row[1], row[0].casefold()))
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        game = room.get('game') if room else None
+        if game and game['token'] == game_token:
+            game['leaderboard'] = leaderboard
+            game['finished_at'] = datetime.utcnow()
+            room['state'] = 'finished'
+    socketio.emit('game_ended', {'reason': 'finished'}, room=lobby_id)
+    socketio.emit('show_results', {'leaderboard': leaderboard}, room=lobby_id)
+    socketio.start_background_task(_cleanup_lobby_later, lobby_id, game_token)
+
+
+def _cleanup_lobby_later(lobby_id, game_token):
+    socketio.sleep(900)
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        game = room.get('game') if room else None
+        if game and game['token'] == game_token and game['status'] == 'finished':
+            lobby_rooms.pop(lobby_id, None)
+
+
+def _game_deadline_worker(lobby_id, game_token, timer):
+    socketio.sleep(timer)
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        game = room.get('game') if room else None
+        if not game or game['token'] != game_token or game['status'] == 'finished':
+            return
+        game['ending'] = True
+    socketio.emit('game_submission_requested', {'reason': 'time_up'}, room=lobby_id)
+    socketio.sleep(1.5)
+    _finish_round(lobby_id, game_token)
+
+
+def _early_finish_worker(lobby_id, game_token):
+    socketio.sleep(3)
+    _finish_round(lobby_id, game_token)
+
+
+@socketio.on('join_lobby')
+def handle_join_lobby(data):
+    if not isinstance(data, dict):
+        return
+    user_id = session.get('user_id')
+    user = db.session.get(User, user_id) if user_id else None
+    lobby_id = str(data.get('room', ''))
+    if not user:
+        emit('lobby_error', {'message': 'سجّل الدخول للانضمام'})
+        return
+
+    if lobby_id.startswith('user_'):
+        try:
+            requested_user_id = int(lobby_id.removeprefix('user_'))
+        except ValueError:
+            return
+        if requested_user_id == user.id:
+            join_room(lobby_id)
+        return
+
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        if not room or user.id not in room['players']:
+            emit('lobby_error', {'message': 'ليس لديك صلاحية دخول هذه الغرفة'})
+            return
+        is_new_player = user.id not in room['connected_ids']
+        room['players'][user.id] = user.username
+        room['connected_ids'].add(user.id)
+        room_state = {
+            'players': [{'id': player_id, 'username': username}
+                        for player_id, username in room['players'].items()],
+            'host_id': room['host_id'],
+            'state': room['state']
+        }
+        game = room.get('game')
+
+    join_room(lobby_id)
+    emit('lobby_state', room_state)
+    if is_new_player:
+        socketio.emit('player_joined', {'user_id': user.id, 'username': user.username}, room=lobby_id, skip_sid=request.sid)
+    if game and game['status'] == 'playing':
+        emit('redirect_to_game', {
+            'lobby_id': lobby_id,
+            'timer': max(0, int(game['end_at'] - datetime.utcnow().timestamp())),
+            'letter': game['letter']
+        })
+    elif game and game['status'] == 'finished' and game.get('leaderboard') is not None:
+        emit('show_results', {'leaderboard': game['leaderboard']})
+
+
+@socketio.on('start_game_event')
+def handle_start_game(data):
+    if not isinstance(data, dict):
+        return
+    user_id = session.get('user_id')
+    lobby_id = str(data.get('lobby_id', ''))
+    try:
+        timer = int(data.get('timer', 60))
+    except (TypeError, ValueError):
+        timer = 60
+    timer = timer if timer in (30, 60, 90) else 60
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        if not room or room['host_id'] != user_id or room['state'] != 'waiting':
+            emit('lobby_error', {'message': 'المضيف فقط يمكنه بدء الجولة'})
+            return
+        letter = random.choice(ARABIC_LETTERS)
+        token = str(uuid.uuid4())
+        participants = dict(room['players'])
+        room['state'] = 'playing'
+        room['game'] = {
+            'token': token,
+            'status': 'playing',
+            'timer': timer,
+            'letter': letter,
+            'participants': participants,
+            'answers': {},
+            'ending': False,
+            'started_at': datetime.utcnow(),
+            'end_at': datetime.utcnow().timestamp() + timer,
+            'leaderboard': None
+        }
+
+    socketio.emit('redirect_to_game', {
+        'lobby_id': lobby_id,
+        'timer': timer,
+        'letter': letter
+    }, room=lobby_id)
+    socketio.start_background_task(_game_deadline_worker, lobby_id, token, timer)
+
+
+def _record_submission(data, early_finish=False):
+    if not isinstance(data, dict):
+        return
+    user_id = session.get('user_id')
+    lobby_id = str(data.get('lobby_id', ''))
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        game = room.get('game') if room else None
+        if not game or game['status'] != 'playing' or user_id not in game['participants']:
+            return
+        game['answers'][user_id] = {
+            'username': game['participants'][user_id],
+            'answers': _safe_answers(data.get('answers'))
+        }
+        if early_finish and not game['ending']:
+            game['ending'] = True
+            should_request_others = True
+            token = game['token']
+        else:
+            should_request_others = False
+            token = game['token']
+        all_submitted = len(game['answers']) >= len(game['participants'])
+
+    if should_request_others:
+        socketio.emit('game_submission_requested', {'reason': 'player_finished'}, room=lobby_id)
+        if all_submitted:
+            _finish_round(lobby_id, token)
+        else:
+            socketio.start_background_task(_early_finish_worker, lobby_id, token)
+    elif all_submitted and game.get('ending'):
+        _finish_round(lobby_id, token)
+
+
+@socketio.on('player_finished')
+def handle_finish(data):
+    _record_submission(data, early_finish=True)
+
+
+@socketio.on('time_up')
+def handle_time_up(data):
+    _record_submission(data, early_finish=False)
+
+
+@socketio.on('kick_player')
+def handle_kick_player(data):
+    if not isinstance(data, dict):
+        return
+    host_id = session.get('user_id')
+    lobby_id = str(data.get('lobby_id', ''))
+    try:
+        kicked_id = int(data.get('user_id'))
+    except (TypeError, ValueError):
+        return
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        if not room or room['host_id'] != host_id or room['state'] != 'waiting' or kicked_id == host_id:
+            return
+        username = room['players'].pop(kicked_id, None)
+        if not username:
+            return
+        room['invited_ids'].discard(kicked_id)
+        target_sids = list(active_user_sids.get(kicked_id, set()))
+    for sid in target_sids:
+        leave_room(lobby_id, sid=sid)
+    socketio.emit('you_were_kicked', {}, room=f"user_{kicked_id}")
+    socketio.emit('player_left', {'user_id': kicked_id, 'username': username}, room=lobby_id)
+
+
+@socketio.on('game_chat')
+def handle_game_chat(data):
+    if not isinstance(data, dict):
+        return
+    user_id = session.get('user_id')
+    lobby_id = str(data.get('room', ''))
+    message = (data.get('message') or '').strip()[:300]
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        allowed = room and room['state'] == 'playing' and user_id in room['players']
+        username = room['players'].get(user_id) if allowed else None
+    if allowed and message:
+        socketio.emit('receive_game_chat', {'user': username, 'message': message}, room=lobby_id)
+
+def create_lobby(lobby_id, host):
+    with state_lock:
+        lobby_rooms[lobby_id] = {
+            'host_id': host.id,
+            'players': {host.id: host.username},
+            'connected_ids': set(),
+            'invited_ids': set(),
+            'state': 'waiting',
+            'game': None
+        }
+
 
 @app.route('/play/<lobby_id>')
-@login_required 
+@login_required
 def lobby(lobby_id):
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        if not room or current_user.id not in room['players'] and current_user.id not in room['invited_ids']:
+            flash("الغرفة غير موجودة أو انتهت صلاحيتها")
+            return redirect(url_for('dashboard'))
+        if room['state'] == 'playing':
+            game = room['game']
+            return redirect(url_for('game_page', lobby_id=lobby_id, timer=game['timer'], letter=game['letter']))
+
     friend_conns = Friend.query.filter_by(user_id=current_user.id, status='accepted').all()
-    friends_list = []
-    for f in friend_conns:
-        friend_user = db.session.get(User, f.friend_id)
-        if friend_user:
-            # هنضيف حالة الـ online وهمياً دلوقتي أو لو عندك column ليها
-            friends_list.append(friend_user)
-
-    # بنقرأ هل هو مضيف من الرابط
-    is_host = request.args.get('host', 'false') == 'true'
-
-    return render_template('lobby.html', 
-                           user=current_user, 
-                           friends=friends_list, 
-                           lobby_id=lobby_id, 
-                           is_host=is_host)
+    friends_list = [
+        friend_user
+        for conn in friend_conns
+        if (friend_user := db.session.get(User, conn.friend_id)) is not None
+    ]
+    return render_template(
+        'lobby.html',
+        user=current_user,
+        friends=friends_list,
+        lobby_id=lobby_id,
+        is_host=current_user.id == room['host_id']
+    )
 
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-@socketio.on('player_joined_lobby')
-def handle_player_joined_lobby(data):
-    lobby_id = data['lobby_id']
-    username = data['username']
-    user_id = data.get('user_id', '')
-    emit('player_joined', {'username': username, 'user_id': user_id}, room=lobby_id, include_self=False)
-    print(f"Broadcasted: {username} joined {lobby_id}")
-
-@socketio.on('start_game_event')
-def handle_start_game(data):
-    lobby_id = data['lobby_id']
-    # هنا بنسحب الوقت اللي أنت اخترته من الـ Select box في اللوبي
-    selected_timer = data.get('timer', 60) 
-
-    # اختيار حرف عشوائي فعلاً
-    letters = ['أ', 'ب', 'ت', 'ج', 'ح', 'خ', 'د', 'ر', 'ز', 'س', 'ش', 'ص', 'ط', 'ع', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'هـ', 'و', 'ي']
-    selected_letter = random.choice(letters)
-
-    # نبعت البيانات للكل
-    emit('redirect_to_game', {
-        'lobby_id': lobby_id,
-        'timer': selected_timer,
-        'letter': selected_letter
-    }, room=lobby_id)
-
-@socketio.on('reject_invite')
-def handle_reject(data):
-    host_id = data['host_id']
-    rejecter_name = data['rejecter_name']
-
-    # نبعت للمضيف إن فلان رفض في غرفته الخاصة (user_ID)
-    emit('invite_rejected', {
-        'msg': f"للأسف، {rejecter_name} رفض التحدي بتاعك."
-    }, room=f"user_{host_id}")
-
 @app.route('/start_new_game')
 @login_required
 def start_new_game():
     new_lobby_id = str(uuid.uuid4())[:8]
-    return redirect(url_for('lobby', lobby_id=new_lobby_id, host='true'))
+    create_lobby(new_lobby_id, current_user)
+    return redirect(url_for('lobby', lobby_id=new_lobby_id))
+
+
+@app.route('/challenge/<int:friend_id>')
+@login_required
+def challenge_friend(friend_id):
+    friend_link = Friend.query.filter_by(
+        user_id=current_user.id, friend_id=friend_id, status='accepted'
+    ).first()
+    friend = db.session.get(User, friend_id)
+    if not friend_link or not friend or friend_id == current_user.id:
+        flash("يمكنك تحدي أصدقائك فقط")
+        return redirect(url_for('friends'))
+    if not friend.is_online:
+        flash(f"{friend.username} غير متصل الآن")
+        return redirect(url_for('friends'))
+
+    lobby_id = str(uuid.uuid4())[:8]
+    create_lobby(lobby_id, current_user)
+    with state_lock:
+        lobby_rooms[lobby_id]['invited_ids'].add(friend_id)
+    socketio.emit('receive_invite', {
+        'sender_name': current_user.username,
+        'lobby_id': lobby_id
+    }, room=f"user_{friend_id}")
+    return redirect(url_for('lobby', lobby_id=lobby_id))
 
 @app.route('/join_lobby/<lobby_id>')
 @login_required
 def join_lobby(lobby_id):
-    return redirect(url_for('lobby', lobby_id=lobby_id, host='false'))
-
-@socketio.on('join_lobby')
-def handle_join_lobby(data):
-    room = data['room']
-    join_room(room)
-    print(f"User joined room: {room}")
-
-@socketio.on('kick_player')
-def handle_kick_player(data):
-    lobby_id = data['lobby_id']
-    kicked_username = data['username']
-    emit('you_were_kicked', {}, room=f"user_{data['user_id']}")
-    emit('player_left', {'username': kicked_username}, room=lobby_id)
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        if not room or current_user.id not in room['invited_ids']:
+            flash("الدعوة غير موجودة أو انتهت صلاحيتها")
+            return redirect(url_for('dashboard'))
+        room['players'][current_user.id] = current_user.username
+        room['invited_ids'].discard(current_user.id)
+    return redirect(url_for('lobby', lobby_id=lobby_id))
 
 @app.route('/game/<lobby_id>')
 @login_required
 def game_page(lobby_id):
-    timer = request.args.get('timer', 60)
-    letter = request.args.get('letter', 'أ')
+    with state_lock:
+        room = lobby_rooms.get(lobby_id)
+        game = room.get('game') if room else None
+        if not room or current_user.id not in room['players'] or not game:
+            flash("الجولة غير متاحة لهذا الحساب")
+            return redirect(url_for('dashboard'))
+        timer = max(0, int(game['end_at'] - datetime.utcnow().timestamp()))
+        letter = game['letter']
     return render_template('game.html', lobby_id=lobby_id, timer=timer, letter=letter, user=current_user)
 
-@socketio.on('game_chat')
-def handle_game_chat(data):
-    emit('receive_game_chat', data, room=data['room'])
-
-
-@socketio.on('player_finished')
-def handle_finish(data):
-    lobby_id = data['lobby_id']
-    username = data['username']
-    answers = data['answers']
-    current_letter = data.get('letter', 'أ')
-    is_time_up = data.get('time_up', False)
-
-    if lobby_id not in game_results:
-        game_results[lobby_id] = {'players': {}, 'ended': False, 'letter': current_letter}
-
-    if game_results[lobby_id].get('ended'):
+@socketio.on('mark_as_read')
+def handle_mark_as_read(data):
+    if not isinstance(data, dict):
+        return
+    user_id = session.get('user_id')
+    try:
+        friend_id = int(data.get('friend_id'))
+    except (TypeError, ValueError):
+        return
+    if not user_id:
         return
 
-    game_results[lobby_id]['players'][username] = answers
-
-    # لو اللاعب داس "تم" قبل الوقت ما يخلص، نوقف الجيم عند الكل
-    if not is_time_up:
-        emit('stop_game_for_all', {'winner': username}, room=lobby_id)
-
-    game_results[lobby_id]['ended'] = True
-
-    # استدعاء دالة الحساب وتوزيع الجوائز
-    calculate_scores(lobby_id)
-
-def calculate_scores(lobby_id):
-    results = game_results.get(lobby_id)
-    if not results:
-        return
-
-    leaderboard = []
-
-    # اللف على كل اللاعبين اللي بعتوا إجاباتهم
-    for username, answers in results['players'].items():
-        # 1. حساب نقاط الجيم الحالي بناءً على الحرف والإجابات
-        score_this_game = calculate_actual_points(answers, results['letter'])
-
-        # 2. تحديث قاعدة البيانات (إضافة النقاط للحساب الدائم)
-        user = User.query.filter_by(username=username).first()
-        if user:
-            user.points += score_this_game
-            db.session.commit() # حفظ النقاط الجديدة للأبد
-            print(f"User {username} updated: +{score_this_game} pts (Total: {user.points}, Level: {user.level})")
-
-        leaderboard.append((username, score_this_game))
-
-    # ترتيب الأوائل (من الأعلى للأقل)
-    leaderboard.sort(key=lambda x: x[1], reverse=True)
-
-    # إرسال النتائج النهائية لكل اللاعبين في اللوبي
-    socketio.emit('show_results', {'leaderboard': leaderboard}, room=lobby_id)
-
-    # تنظيف الذاكرة بعد انتهاء الجيم
-    if lobby_id in game_results:
-        del game_results[lobby_id]
-
-@socketio.on('time_up')
-def handle_time_up(data):
-    lobby_id = data['lobby_id']
-    username = data['username']
-    answers = data['answers']
-    current_letter = data.get('letter', 'أ')
-
-    if lobby_id not in game_results:
-        game_results[lobby_id] = {'players': {}, 'ended': False, 'letter': current_letter}
-
-    game_results[lobby_id]['players'][username] = answers
-
-    if not game_results[lobby_id].get('ended'):
-        game_results[lobby_id]['ended'] = True
-        emit('game_ended', {'reason': 'time_up'}, room=lobby_id)
-        calculate_scores(lobby_id)
-
-def calculate_scores(lobby_id):
-    if lobby_id not in game_results:
-        return
-
-    lobby_data = game_results[lobby_id]
-    all_players = lobby_data.get('players', {})
-    current_letter = lobby_data.get('letter', 'أ')
-    
-    if not all_players:
-        return
-
-    scores_summary = {}
-
-    for username, answers in all_players.items():
-        total_p = 0
-        for i in range(len(answers)):
-            ans = answers[i].strip() if i < len(answers) else ""
-            
-            if not ans:
-                continue
-                
-            first_char = ans[0] if ans else ""
-            if first_char == current_letter:
-                all_ans_in_cat = []
-                for p_ans in all_players.values():
-                    if i < len(p_ans):
-                        all_ans_in_cat.append(p_ans[i].strip().lower())
-                
-                if all_ans_in_cat.count(ans.lower()) > 1:
-                    total_p += 5
-                else:
-                    total_p += 10
-        
-        scores_summary[username] = total_p
-
-    leaderboard = sorted(scores_summary.items(), key=lambda x: x[1], reverse=True)
-
-    for username, points in scores_summary.items():
-        player = User.query.filter_by(username=username).first()
-        if player:
-            player.points += points
-            if player.points >= player.level * 100:
-                player.level += 1
+    Message.query.filter_by(
+        sender_id=friend_id,
+        receiver_id=user_id,
+        is_read=False
+    ).update({Message.is_read: True}, synchronize_session=False)
     db.session.commit()
+    socketio.emit('messages_seen', {'seen_by': user_id}, room=f"user_{friend_id}")
 
-    emit('show_results', {'leaderboard': leaderboard}, room=lobby_id)
+@socketio.on('typing')
+def handle_typing(data):
+    if not isinstance(data, dict):
+        return
+    friend_id = data.get('friend_id')
+    user_id = session.get('user_id')
+    if not user_id:
+        return
+    try:
+        friend_id = int(friend_id)
+    except (TypeError, ValueError):
+        return
+    socketio.emit('display_typing', {
+        'user_id': user_id,
+        'is_typing': bool(data.get('is_typing'))
+    }, room=f"user_{friend_id}")
 
-    if lobby_id in game_results:
-        del game_results[lobby_id]
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory('static', 'manifest.json')
 
-@socketio.on('redirect_to_game')
-def redirect_to_game(data):
-    # التأكد من إرسال التايمر كـ Parameter في الرابط
-    target_url = f"/game/{data['lobby_id']}?timer={data['timer']}&letter={data['letter']}"
-    emit('redirect_to_game_url', {'url': target_url}, room=data['lobby_id'])
+@app.route('/favicon.ico')
+def serve_favicon():
+    return send_from_directory('static', 'favicon.svg', mimetype='image/svg+xml')
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=True, log_output=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, log_output=True)

@@ -6,6 +6,8 @@ authors = ["Your Name <you@example.com>"]
 requires-python = ">=3.11"
 dependencies = [
     "flask>=3.1.2",
+    "flask-login>=0.6.3",
+    "flask-socketio>=5.7.0",
     "flask-sqlalchemy>=3.1.1",
     "sqlalchemy>=2.0.46",
     "werkzeug>=3.1.5",

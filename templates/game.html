@@ -1,482 +1,414 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <title>FamilyGame | التحدي بدأ!</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4efe6">
+    <title>FamilyGame | جولة اللعب</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --neon-color: #55efc4; --bg-dark: #0f0c29; }
-        * { box-sizing: border-box; }
-        body { 
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            color: white; 
-            font-family: 'Cairo', sans-serif; 
-            margin: 0; 
-            min-height: 100vh;
+        :root {
+            color-scheme: light;
+            --paper:#f4efe6;
+            --paper-deep:#e9e0d3;
+            --card:#fffdf9;
+            --ink:#272126;
+            --muted:#817872;
+            --line:#e8dfd5;
+            --plum:#563b50;
+            --plum-deep:#422d3e;
+            --coral:#df684e;
+            --coral-deep:#bd4f3d;
+            --teal:#286f67;
+            --teal-pale:#e2f0ea;
+            --gold:#c58a35;
+            --shadow:0 16px 44px rgba(58,40,48,.08);
         }
-
-        .game-header { 
-            display: flex; 
-            justify-content: space-around; 
-            align-items: center; 
-            padding: 20px; 
-            background: rgba(0,0,0,0.3);
-            backdrop-filter: blur(10px);
-            border-bottom: 2px solid var(--neon-color); 
+        * { box-sizing:border-box; }
+        body {
+            margin:0;
+            min-height:100vh;
+            color:var(--ink);
+            background:
+                radial-gradient(ellipse at 12% 3%,rgba(223,104,78,.11),transparent 26rem),
+                radial-gradient(ellipse at 92% 68%,rgba(40,111,103,.09),transparent 29rem),
+                var(--paper);
+            font-family:"Cairo",sans-serif;
         }
-        .timer-box { 
-            font-size: 2rem; 
-            color: #ff7675; 
-            font-weight: 900;
-            background: rgba(255,118,117,0.1);
-            padding: 10px 25px;
-            border-radius: 15px;
-            border: 2px solid rgba(255,118,117,0.3);
+        button,input { font:inherit; }
+        button:focus-visible,input:focus-visible { outline:3px solid rgba(223,104,78,.42); outline-offset:3px; }
+        .game-shell { width:min(1280px,100%); margin:auto; padding:22px 28px 38px; }
+        .game-top { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:19px; }
+        .brand { display:flex; align-items:center; gap:10px; color:var(--ink); text-decoration:none; font-weight:900; letter-spacing:-.04em; }
+        .brand-mark { width:36px;height:36px;display:grid;place-items:center;border-radius:13px 13px 13px 4px;color:#fff;background:var(--plum); }
+        .live-label { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:.8rem; font-weight:700; }
+        .live-dot { width:8px;height:8px;border-radius:50%;background:var(--teal); }
+        .identity { display:flex;align-items:center;gap:8px;padding:8px 13px;border:1px solid var(--line);border-radius:12px;background:rgba(255,253,249,.7);color:var(--plum);font-size:.84rem;font-weight:800; }
+        .identity i { color:var(--coral); }
+        .round-banner { position:relative; overflow:hidden; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:18px; min-height:142px; margin-bottom:21px; padding:20px clamp(18px,4vw,42px); border-radius:22px; color:#fffaf4; background:var(--plum); box-shadow:0 17px 38px rgba(86,59,80,.16); }
+        .round-banner::after { content:"";position:absolute;width:280px;height:280px;top:-155px;left:20%;border:1px solid rgba(255,255,255,.1);border-radius:50%;box-shadow:0 0 0 22px rgba(255,255,255,.025),0 0 0 48px rgba(255,255,255,.02);pointer-events:none; }
+        .round-copy { position:relative;z-index:1; }
+        .round-overline { margin:0 0 5px;color:#e9bca7;font-size:.75rem;font-weight:800;letter-spacing:.06em; }
+        .round-copy h1 { margin:0;font-size:clamp(1.2rem,2.5vw,1.8rem);font-weight:900; }
+        .round-copy p { margin:4px 0 0;color:rgba(255,250,244,.65);font-size:.8rem; }
+        .letter-card { position:relative;z-index:1;width:92px;height:92px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.3);border-radius:28px;color:#ffbd9e;background:rgba(255,255,255,.11);font-size:3.6rem;font-weight:900;line-height:1;box-shadow:inset 0 0 0 5px rgba(255,255,255,.035); }
+        .timer-card { position:relative;z-index:1;justify-self:end;display:flex;align-items:center;gap:12px;min-width:145px;padding:12px 16px;border:1px solid rgba(255,255,255,.18);border-radius:15px;background:rgba(255,255,255,.09); }
+        .timer-icon { color:#ffbd9e;font-size:1.25rem; }
+        .timer-copy { text-align:right; }
+        .timer-caption { display:block;color:rgba(255,250,244,.65);font-size:.68rem; }
+        .timer-value { display:block;direction:ltr;color:#fffaf4;font:800 1.5rem/1.25 "Cairo",sans-serif; }
+        .timer-card.warning { border-color:rgba(255,189,158,.5);background:rgba(223,104,78,.2); }
+        .timer-card.warning .timer-value { color:#ffd0b8; }
+        .progress-track { height:4px;overflow:hidden;margin:-21px 7px 20px;border-radius:10px;background:rgba(86,59,80,.12); }
+        .progress-fill { width:100%;height:100%;border-radius:inherit;background:var(--coral);transform-origin:right center;transition:transform 1s linear; }
+        .layout { display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;align-items:stretch; }
+        .answers-card,.chat-card { border:1px solid rgba(86,59,80,.09);border-radius:20px;background:var(--card);box-shadow:var(--shadow); }
+        .answers-card { padding:23px; }
+        .section-heading { display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px; }
+        .heading-title { display:flex;align-items:center;gap:11px; }
+        .heading-icon { width:38px;height:38px;display:grid;place-items:center;border-radius:13px;color:var(--teal);background:var(--teal-pale); }
+        .section-heading h2 { margin:0;font-size:1.12rem;font-weight:900; }
+        .section-heading p { margin:2px 0 0;color:var(--muted);font-size:.74rem; }
+        .round-chip { padding:6px 10px;border-radius:9px;color:var(--plum);background:#f1e9ef;font-size:.72rem;font-weight:800;white-space:nowrap; }
+        .inputs-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
+        .input-group { min-width:0;padding:13px 14px 14px;border:1px solid var(--line);border-radius:15px;background:#fff;transition:border-color .18s ease,background .18s ease,transform .18s ease; }
+        .input-group:focus-within { border-color:#82b1a4;background:#fbfffc;transform:translateY(-1px); }
+        .input-group label { display:flex;align-items:center;gap:9px;margin-bottom:9px;color:var(--plum);font-size:.86rem;font-weight:800; }
+        .category-icon { width:27px;height:27px;display:grid;place-items:center;border-radius:9px;color:var(--teal);background:var(--teal-pale);font-size:.74rem; }
+        .game-input { width:100%;min-width:0;padding:10px 12px;border:1px solid #eee7df;border-radius:10px;color:var(--ink);background:#fcfaf6;font-size:1rem;transition:border-color .18s ease,background .18s ease; }
+        .game-input::placeholder { color:#b6aaa0;font-size:.78rem; }
+        .game-input:focus { border-color:#82b1a4;background:#fff;outline:none; }
+        .game-input:disabled { color:#928984;background:#f1ede8;cursor:not-allowed; }
+        .stop-btn { grid-column:1 / -1;min-height:58px;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:4px;border:0;border-radius:14px;color:#fff;background:var(--coral);box-shadow:0 9px 18px rgba(189,79,61,.17);font-weight:900;font-size:1.02rem;cursor:pointer;transition:transform .2s ease,background .2s ease,box-shadow .2s ease; }
+        .stop-btn:hover:not(:disabled) { background:var(--coral-deep);box-shadow:0 12px 24px rgba(189,79,61,.24);transform:translateY(-2px); }
+        .stop-btn:disabled { color:#f7f1ec;background:#9c928b;box-shadow:none;cursor:default; }
+        .game-status { display:none;margin-top:12px;padding:11px 13px;border-radius:11px;color:var(--teal);background:var(--teal-pale);font-size:.82rem;font-weight:700;text-align:center; }
+        .game-status.visible { display:block; }
+        .chat-card { display:flex;flex-direction:column;min-height:540px;overflow:hidden; }
+        .chat-heading { display:flex;align-items:center;gap:11px;padding:18px 18px 15px;border-bottom:1px solid var(--line); }
+        .chat-heading .heading-icon { color:var(--coral-deep);background:#fff0e9; }
+        .chat-heading h2 { margin:0;font-size:1rem;font-weight:900; }
+        .chat-heading p { margin:1px 0 0;color:var(--muted);font-size:.7rem; }
+        .chat-messages { flex:1;max-height:445px;overflow:auto;padding:14px;scroll-behavior:smooth; }
+        .chat-empty { display:grid;min-height:220px;place-items:center;padding:20px;color:#a3978e;text-align:center;font-size:.79rem;line-height:1.8; }
+        .chat-empty i { display:block;margin-bottom:9px;color:#c7b9af;font-size:1.5rem; }
+        .chat-msg { max-width:94%;margin:0 0 9px;padding:9px 11px;border:1px solid #eee7df;border-radius:12px 12px 3px 12px;background:#fff;animation:messageIn .2s both; }
+        .chat-msg.is-self { margin-right:auto;margin-left:0;border-color:#d8e9e2;border-radius:12px 12px 12px 3px;background:#eff7f3; }
+        .chat-user { display:block;margin-bottom:2px;color:var(--plum);font-size:.7rem;font-weight:900; }
+        .chat-msg.is-self .chat-user { color:var(--teal); }
+        .chat-text { overflow-wrap:anywhere;color:#49413e;font-size:.82rem;line-height:1.65;white-space:pre-wrap; }
+        .chat-form { display:flex;gap:8px;padding:12px;border-top:1px solid var(--line); }
+        .chat-input { flex:1;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:11px;color:var(--ink);background:#fcfaf6;font-size:.82rem; }
+        .chat-input:focus { border-color:#82b1a4;outline:none; }
+        .chat-send { flex:none;width:42px;height:42px;display:grid;place-items:center;border:0;border-radius:11px;color:white;background:var(--plum);cursor:pointer;transition:transform .18s ease,background .18s ease; }
+        .chat-send:hover { background:var(--plum-deep);transform:translateY(-1px); }
+        .chat-send:disabled { opacity:.5;cursor:not-allowed;transform:none; }
+        .results-overlay { position:fixed;z-index:30;inset:0;display:grid;place-items:center;overflow:auto;padding:22px;background:rgba(39,33,38,.7);backdrop-filter:blur(7px); }
+        .results-overlay[hidden] { display:none; }
+        .results-card { width:min(540px,100%);padding:clamp(22px,5vw,38px);border:1px solid rgba(255,255,255,.6);border-radius:24px;background:var(--card);box-shadow:0 30px 90px rgba(22,14,20,.28);animation:resultIn .32s both; }
+        .results-intro { text-align:center; }
+        .results-trophy { width:60px;height:60px;display:grid;place-items:center;margin:0 auto 12px;border-radius:20px;color:var(--gold);background:#f8efde;font-size:1.6rem; }
+        .results-intro h2 { margin:0;font-size:1.8rem;font-weight:900;letter-spacing:-.04em; }
+        .results-intro p { margin:4px 0 21px;color:var(--muted);font-size:.86rem; }
+        .leaderboard { display:grid;gap:9px;max-height:min(48vh,390px);overflow:auto; }
+        .leader-row { display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#fff; }
+        .leader-row.is-first { border-color:#ead7b2;background:#fffaf0; }
+        .leader-row.is-me { box-shadow:inset -3px 0 var(--teal); }
+        .rank { flex:none;width:31px;height:31px;display:grid;place-items:center;border-radius:10px;color:var(--plum);background:#f1e9ef;font-size:.8rem;font-weight:900; }
+        .leader-name { overflow:hidden;flex:1;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem;font-weight:800; }
+        .you-tag { padding:3px 7px;border-radius:7px;color:var(--teal);background:var(--teal-pale);font-size:.65rem;font-weight:800; }
+        .points { color:var(--teal);font-weight:900;white-space:nowrap; }
+        .results-actions { display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:20px; }
+        .return-copy { color:var(--muted);font-size:.74rem;line-height:1.7; }
+        .return-count { color:var(--coral-deep);font-weight:900; }
+        .home-btn { display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 15px;border:0;border-radius:11px;color:#fff;background:var(--plum);font-size:.8rem;font-weight:800;text-decoration:none;white-space:nowrap;transition:background .2s ease,transform .2s ease; }
+        .home-btn:hover { background:var(--plum-deep);transform:translateY(-1px); }
+        @keyframes messageIn { from { opacity:0;transform:translateY(5px); } to { opacity:1;transform:translateY(0); } }
+        @keyframes resultIn { from { opacity:0;transform:translateY(12px) scale(.985); } to { opacity:1;transform:translateY(0) scale(1); } }
+        @media (max-width:980px) { .layout { grid-template-columns:minmax(0,1fr) 290px;gap:14px; } .answers-card { padding:18px; } }
+        @media (max-width:760px) {
+            .game-shell { padding:15px 14px 25px; }
+            .game-top { margin-bottom:14px; }
+            .round-banner { min-height:125px;grid-template-columns:1fr auto;gap:10px;margin-bottom:17px;padding:17px;border-radius:18px; }
+            .letter-card { grid-column:2;grid-row:1;width:72px;height:72px;border-radius:22px;font-size:2.8rem; }
+            .timer-card { grid-column:1 / -1;grid-row:2;justify-self:stretch;min-width:0;justify-content:center;padding:8px 13px; }
+            .timer-copy { text-align:center; }
+            .round-copy { grid-column:1;grid-row:1; }
+            .round-copy p { max-width:200px; }
+            .progress-track { margin-top:-17px; }
+            .layout { grid-template-columns:1fr; }
+            .chat-card { min-height:350px; }
+            .chat-messages { max-height:320px;min-height:190px; }
+            .answers-card { padding:16px 13px; }
         }
-        .timer-box.warning { animation: pulse 0.5s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        
-        .letter-box { 
-            font-size: 3.5rem; 
-            color: var(--neon-color); 
-            text-shadow: 0 0 30px var(--neon-color);
-            background: rgba(85,239,196,0.1);
-            width: 80px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 20px;
-            border: 2px solid var(--neon-color);
+        @media (max-width:430px) {
+            .brand { font-size:.88rem; }
+            .live-label { font-size:.7rem; }
+            .identity { padding:7px 9px;font-size:.75rem; }
+            .inputs-grid { grid-template-columns:1fr;gap:9px; }
+            .input-group { display:grid;grid-template-columns:106px 1fr;align-items:center;gap:8px;padding:9px 10px; }
+            .input-group label { margin:0;font-size:.78rem; }
+            .category-icon { width:25px;height:25px; }
+            .game-input { padding:9px 10px; }
+            .section-heading { align-items:flex-start; }
+            .round-chip { font-size:.65rem; }
+            .results-actions { align-items:stretch;flex-direction:column; }
+            .home-btn { width:100%; }
         }
-        .player-box {
-            font-size: 1.2rem;
-            color: #a29bfe;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .game-container { 
-            display: grid; 
-            grid-template-columns: 1fr 320px; 
-            gap: 25px; 
-            padding: 25px; 
-            max-width: 1300px; 
-            margin: auto; 
-        }
-
-        .inputs-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 18px; 
-        }
-        .input-group { 
-            background: rgba(255,255,255,0.05); 
-            padding: 20px; 
-            border-radius: 18px; 
-            border: 1px solid rgba(255,255,255,0.1);
-            transition: 0.3s;
-        }
-        .input-group:focus-within {
-            border-color: var(--neon-color);
-            background: rgba(85,239,196,0.05);
-        }
-        .input-group label { 
-            display: block; 
-            margin-bottom: 12px; 
-            font-weight: bold; 
-            color: #a29bfe;
-            font-size: 1.1rem;
-        }
-        .input-group input { 
-            width: 100%; 
-            background: rgba(0,0,0,0.3); 
-            border: none; 
-            border-radius: 10px;
-            color: white; 
-            font-size: 1.3rem; 
-            outline: none; 
-            padding: 12px 15px;
-            font-family: 'Cairo', sans-serif;
-        }
-        .input-group input:focus { 
-            box-shadow: 0 0 0 2px var(--neon-color);
-        }
-        .input-group input:disabled { 
-            color: #636e72; 
-            cursor: not-allowed; 
-        }
-
-        .chat-box { 
-            background: rgba(30,30,50,0.8); 
-            border-radius: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100%;
-            min-height: 450px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .chat-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            font-weight: bold;
-            color: #a29bfe;
-        }
-        #chat-messages { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 15px; 
-            font-size: 0.95rem; 
-        }
-        .chat-msg {
-            background: rgba(255,255,255,0.05);
-            padding: 8px 12px;
-            border-radius: 10px;
-            margin-bottom: 8px;
-        }
-        .chat-input-area { 
-            display: flex; 
-            padding: 12px; 
-            border-top: 1px solid rgba(255,255,255,0.1);
-            gap: 10px;
-        }
-        .chat-input-area input { 
-            flex: 1; 
-            background: rgba(0,0,0,0.3); 
-            border: none; 
-            color: white; 
-            padding: 12px 15px; 
-            border-radius: 12px; 
-            outline: none;
-            font-family: 'Cairo', sans-serif;
-        }
-        .chat-input-area button {
-            background: var(--neon-color);
-            border: none;
-            padding: 12px 18px;
-            border-radius: 12px;
-            cursor: pointer;
-            color: #000;
-        }
-
-        .stop-btn { 
-            grid-column: span 2; 
-            padding: 22px; 
-            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
-            color: white; 
-            border: none; 
-            border-radius: 18px; 
-            font-size: 1.4rem; 
-            font-weight: 900; 
-            cursor: pointer; 
-            transition: 0.3s;
-            font-family: 'Cairo', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-        .stop-btn:hover { 
-            transform: translateY(-3px); 
-            box-shadow: 0 10px 30px rgba(108,92,231,0.4);
-        }
-        .stop-btn:disabled {
-            background: #636e72;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        @media (max-width: 900px) {
-            .game-container { grid-template-columns: 1fr; }
-            .inputs-grid { grid-template-columns: 1fr; }
-            .stop-btn { grid-column: span 1; }
+        @media (prefers-reduced-motion:reduce) {
+            *, *::before, *::after { scroll-behavior:auto !important;animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important; }
         }
     </style>
 </head>
 <body>
+    <main class="game-shell">
+        <header class="game-top">
+            <a class="brand" href="/dashboard" aria-label="FamilyGame">
+                <span class="brand-mark"><i class="fa-solid fa-shapes" aria-hidden="true"></i></span>
+                <span>FamilyGame</span>
+            </a>
+            <div class="live-label"><span class="live-dot"></span><span>الجولة شغّالة</span></div>
+            <div class="identity"><i class="fa-solid fa-user" aria-hidden="true"></i><span>{{ user.username }}</span></div>
+        </header>
 
-    <div class="game-header">
-        <div class="timer-box" id="timer-box">
-            <i class="fas fa-clock"></i> <span id="timer-display">{{ timer }}</span>
-        </div>
-        <div class="letter-box" id="letter-display">{{ letter }}</div>
-        <div class="player-box">
-            <i class="fas fa-user"></i>
-            <span>{{ user.username }}</span>
-        </div>
-    </div>
+        <section class="round-banner" aria-label="معلومات الجولة">
+            <div class="round-copy">
+                <p class="round-overline">على السريع.. ركّز!</p>
+                <h1>هات إجابة على حرف</h1>
+                <p>اكتب كلمة لكل تصنيف تبدأ بنفس الحرف.</p>
+            </div>
+            <div class="letter-card" id="letter-display" aria-label="حرف الجولة">{{ letter }}</div>
+            <div class="timer-card" id="timer-box" role="timer" aria-live="off">
+                <i class="fa-regular fa-clock timer-icon" aria-hidden="true"></i>
+                <div class="timer-copy"><span class="timer-caption">الوقت المتبقي</span><span class="timer-value" id="timer-display">{{ timer }}</span></div>
+            </div>
+        </section>
+        <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="timer-progress"></div></div>
 
-    <div class="game-container">
-        <div class="inputs-area">
-            <div class="inputs-grid" id="game-fields">
-                <div class="input-group">
-                    <label><i class="fas fa-male"></i> اسم ولد</label>
-                    <input type="text" class="game-input" id="val-1" autocomplete="off">
+        <div class="layout">
+            <section class="answers-card" aria-labelledby="answersHeading">
+                <div class="section-heading">
+                    <div class="heading-title">
+                        <span class="heading-icon"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i></span>
+                        <div><h2 id="answersHeading">كمّل الخانات</h2><p>كل إجابة صحيحة بتقرّبك من الصدارة</p></div>
+                    </div>
+                    <span class="round-chip">٦ تصنيفات</span>
                 </div>
-                <div class="input-group">
-                    <label><i class="fas fa-female"></i> اسم بنت</label>
-                    <input type="text" class="game-input" id="val-2" autocomplete="off">
+                <div class="inputs-grid" id="game-fields">
+                    <div class="input-group"><label for="val-1"><span class="category-icon"><i class="fa-solid fa-person" aria-hidden="true"></i></span>اسم ولد</label><input class="game-input" id="val-1" type="text" autocomplete="off" placeholder="إجابة تبدأ بالحرف"></div>
+                    <div class="input-group"><label for="val-2"><span class="category-icon"><i class="fa-solid fa-person-dress" aria-hidden="true"></i></span>اسم بنت</label><input class="game-input" id="val-2" type="text" autocomplete="off" placeholder="إجابة تبدأ بالحرف"></div>
+                    <div class="input-group"><label for="val-3"><span class="category-icon"><i class="fa-solid fa-paw" aria-hidden="true"></i></span>حيوان</label><input class="game-input" id="val-3" type="text" autocomplete="off" placeholder="إجابة تبدأ بالحرف"></div>
+                    <div class="input-group"><label for="val-4"><span class="category-icon"><i class="fa-solid fa-seedling" aria-hidden="true"></i></span>نبات</label><input class="game-input" id="val-4" type="text" autocomplete="off" placeholder="إجابة تبدأ بالحرف"></div>
+                    <div class="input-group"><label for="val-5"><span class="category-icon"><i class="fa-solid fa-earth-africa" aria-hidden="true"></i></span>بلاد</label><input class="game-input" id="val-5" type="text" autocomplete="off" placeholder="إجابة تبدأ بالحرف"></div>
+                    <div class="input-group"><label for="val-6"><span class="category-icon"><i class="fa-solid fa-cube" aria-hidden="true"></i></span>جماد</label><input class="game-input" id="val-6" type="text" autocomplete="off" placeholder="إجابة تبدأ بالحرف"></div>
+                    <button class="stop-btn" id="stopBtn" type="button"><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i><span>خلصت، وقف الجولة</span></button>
                 </div>
-                <div class="input-group">
-                    <label><i class="fas fa-paw"></i> حيوان</label>
-                    <input type="text" class="game-input" id="val-3" autocomplete="off">
+                <div class="game-status" id="gameStatus" role="status" aria-live="polite"></div>
+            </section>
+
+            <aside class="chat-card" aria-labelledby="chatHeading">
+                <div class="chat-heading">
+                    <span class="heading-icon"><i class="fa-regular fa-comments" aria-hidden="true"></i></span>
+                    <div><h2 id="chatHeading">دردشة اللمة</h2><p>شجّع أصحابك بين الإجابات</p></div>
                 </div>
-                <div class="input-group">
-                    <label><i class="fas fa-leaf"></i> نبات</label>
-                    <input type="text" class="game-input" id="val-4" autocomplete="off">
+                <div class="chat-messages" id="chat-messages" aria-live="polite">
+                    <div class="chat-empty" id="chatEmpty"><div><i class="fa-regular fa-message" aria-hidden="true"></i>المكان لسه هادي.. ابعت أول رسالة.</div></div>
                 </div>
-                <div class="input-group">
-                    <label><i class="fas fa-globe"></i> بلاد</label>
-                    <input type="text" class="game-input" id="val-5" autocomplete="off">
-                </div>
-                <div class="input-group">
-                    <label><i class="fas fa-cube"></i> جماد</label>
-                    <input type="text" class="game-input" id="val-6" autocomplete="off">
-                </div>
-                <button class="stop-btn" id="stopBtn" onclick="finishGame()">
-                    <i class="fas fa-check-circle"></i>
-                    <span>تم!</span>
-                </button>
+                <form class="chat-form" id="chatForm">
+                    <input class="chat-input" type="text" id="chat-msg" maxlength="250" autocomplete="off" placeholder="اكتب رسالة..." aria-label="اكتب رسالة">
+                    <button class="chat-send" id="chatSend" type="submit" aria-label="إرسال الرسالة"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
+                </form>
+            </aside>
+        </div>
+    </main>
+
+    <section class="results-overlay" id="resultsOverlay" role="dialog" aria-modal="true" aria-labelledby="resultsTitle" hidden>
+        <div class="results-card">
+            <div class="results-intro">
+                <span class="results-trophy"><i class="fa-solid fa-trophy" aria-hidden="true"></i></span>
+                <h2 id="resultsTitle">خلصت الجولة!</h2>
+                <p>دي نتيجة التحدّي.. مين خطف الصدارة؟</p>
+            </div>
+            <div class="leaderboard" id="leaderboard"></div>
+            <div class="results-actions">
+                <div class="return-copy">هنرجعك للرئيسية خلال <span class="return-count" id="back-timer">١٠</span> ثواني</div>
+                <a class="home-btn" href="/dashboard"><i class="fa-solid fa-house" aria-hidden="true"></i> العودة للرئيسية</a>
             </div>
         </div>
-
-        <div class="chat-box">
-            <div class="chat-header">
-                <i class="fas fa-comments"></i> دردشة اللاعبين
-            </div>
-            <div id="chat-messages"></div>
-            <div class="chat-input-area">
-                <input type="text" id="chat-msg" placeholder="اكتب رسالة..." onkeypress="if(event.key==='Enter')sendChat()">
-                <button onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
-            </div>
-        </div>
-    </div>
+    </section>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='presence.js') }}"></script>
     <script>
-        const socket = io();
-        const lobbyId = "{{ lobby_id }}";
-        const myUsername = "{{ user.username }}";
-        const urlParams = new URLSearchParams(window.location.search);
-
-        const gameLetter = urlParams.get('letter') || "{{ letter }}" || "أ";
-        let timeLeft = parseInt(urlParams.get('timer')) || parseInt(urlParams.get('time')) || parseInt("{{ timer }}") || 60;
-        let timerId;
-        let gameEnded = false;
-
-        const timerDisplay = document.getElementById('timer-display');
-        const timerBox = document.getElementById('timer-box');
-        const letterDisplay = document.getElementById('letter-display');
-
-        if (letterDisplay) letterDisplay.innerText = gameLetter;
-        if (timerDisplay) timerDisplay.innerText = timeLeft;
-
-        socket.on('connect', () => {
-            socket.emit('join_lobby', { room: lobbyId });
-            socket.emit('join_lobby', { room: "user_{{ user.id }}" });
-        });
-
-        function startTimer() {
-            if (timerId) clearInterval(timerId);
-
-            timerId = setInterval(() => {
-                if (gameEnded) {
-                    clearInterval(timerId);
-                    return;
-                }
-                
-                timeLeft--;
-                if (timerDisplay) timerDisplay.innerText = timeLeft;
-                
-                if (timeLeft <= 10) {
-                    timerBox.classList.add('warning');
-                }
-
-                if (timeLeft <= 0) {
-                    clearInterval(timerId);
-                    timeUpFinish();
-                }
-            }, 1000);
-        }
-
-        function timeUpFinish() {
-            if (gameEnded) return;
-            gameEnded = true;
-            
-            const inputs = document.querySelectorAll('.game-input');
-            let answers = [];
-            inputs.forEach(input => {
-                input.disabled = true;
-                answers.push(input.value || "");
-            });
-            
-            document.getElementById('stopBtn').disabled = true;
-
-            socket.emit('time_up', {
-                lobby_id: lobbyId,
-                username: myUsername,
-                answers: answers,
-                letter: gameLetter
-            });
-        }
-
-        function finishGame() {
-            if (gameEnded) return;
-            gameEnded = true;
-            clearInterval(timerId);
-
-            const inputs = document.querySelectorAll('.game-input');
-            let answers = [];
-            inputs.forEach(input => {
-                input.disabled = true;
-                answers.push(input.value || "");
-            });
-            
-            document.getElementById('stopBtn').disabled = true;
-
-            socket.emit('player_finished', {
-                lobby_id: lobbyId,
-                username: myUsername,
-                answers: answers,
-                letter: gameLetter,
-                time_up: false
-            });
-        }
-
-        socket.on('stop_game_for_all', (data) => {
-            if (gameEnded) return;
-            gameEnded = true;
-            clearInterval(timerId);
-            document.querySelectorAll('.game-input').forEach(i => i.disabled = true);
-            document.getElementById('stopBtn').disabled = true;
-        });
-
-        socket.on('game_ended', (data) => {
-            if (gameEnded) return;
-            gameEnded = true;
-            clearInterval(timerId);
-            document.querySelectorAll('.game-input').forEach(i => i.disabled = true);
-            document.getElementById('stopBtn').disabled = true;
-        });
-
-        socket.on('show_results', (data) => {
-            showResultsPage(data.leaderboard);
-        });
-
-        function showResultsPage(leaderboard) {
-            let rows = "";
-            leaderboard.forEach((player, index) => {
-                let medal = "";
-                let borderColor = "rgba(255,255,255,0.1)";
-                let bgColor = "rgba(255,255,255,0.03)";
-                
-                if (index === 0) { 
-                    medal = '<span style="font-size: 2rem;">🥇</span>'; 
-                    borderColor = "#f1c40f";
-                    bgColor = "rgba(241,196,15,0.1)";
-                }
-                else if (index === 1) { 
-                    medal = '<span style="font-size: 1.8rem;">🥈</span>'; 
-                    borderColor = "#bdc3c7";
-                    bgColor = "rgba(189,195,199,0.1)";
-                }
-                else if (index === 2) { 
-                    medal = '<span style="font-size: 1.6rem;">🥉</span>'; 
-                    borderColor = "#cd7f32";
-                    bgColor = "rgba(205,127,50,0.1)";
-                }
-                
-                let isMe = player[0] === myUsername;
-                
-                rows += `
-                    <div style="display: flex; align-items: center; justify-content: space-between; 
-                                background: ${isMe ? 'rgba(108,92,231,0.2)' : bgColor}; 
-                                padding: 18px 25px; border-radius: 15px; margin-bottom: 12px; 
-                                border: 2px solid ${isMe ? '#6c5ce7' : borderColor};">
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            ${medal || `<span style="font-size: 1.3rem; color: rgba(255,255,255,0.5);">#${index + 1}</span>`}
-                            <span style="font-size: 1.2rem; font-weight: bold;">${player[0]}</span>
-                            ${isMe ? '<span style="background: #6c5ce7; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem;">انت</span>' : ''}
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: #55efc4; font-size: 1.5rem; font-weight: 900;">+${player[1]}</span>
-                            <span style="color: rgba(255,255,255,0.5);">نقطة</span>
-                        </div>
-                    </div>`;
+        (() => {
+            const socket = window.familyPresenceSocket || io();
+            const lobbyId = {{ lobby_id|tojson }};
+            const myUsername = {{ user.username|tojson }};
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialLetter = {{ letter|tojson }};
+            const initialTimer = {{ timer|tojson }};
+            const gameLetter = initialLetter || "أ";
+            const parsedTimer = Number.parseInt(initialTimer, 10);
+            let timeLeft = Number.isFinite(parsedTimer) ? Math.max(0, parsedTimer) : 60;
+            let timerId = null;
+            let resultRedirectId = null;
+            let gameEnded = false;
+            let submitted = false;
+            let submittedAnswers = null;
+            let resultsReceived = false;
+            const timerDisplay = document.getElementById("timer-display");
+            const timerBox = document.getElementById("timer-box");
+            const timerProgress = document.getElementById("timer-progress");
+            const totalTime = Math.max(timeLeft, 1);
+            const fields = Array.from(document.querySelectorAll(".game-input"));
+            const stopButton = document.getElementById("stopBtn");
+            const gameStatus = document.getElementById("gameStatus");
+            const chatInput = document.getElementById("chat-msg");
+            const chatMessages = document.getElementById("chat-messages");
+            const chatEmpty = document.getElementById("chatEmpty");
+            document.getElementById("letter-display").textContent = gameLetter;
+            fields.forEach((input, index) => {
+                input.addEventListener("keydown", (event) => {
+                    if (event.key !== "Enter") return;
+                    event.preventDefault();
+                    if (index < fields.length - 1) fields[index + 1].focus();
+                    else stopButton.focus();
+                });
             });
 
-            const statsHTML = `
-                <div id="stats-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                     background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); 
-                     z-index: 99999; display: flex; flex-direction: column; align-items: center; 
-                     justify-content: center; padding: 30px; direction: rtl; overflow-y: auto;">
-                    
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <i class="fas fa-trophy" style="font-size: 4rem; color: #f1c40f; margin-bottom: 15px;"></i>
-                        <h1 style="background: linear-gradient(135deg, #f1c40f 0%, #e67e22 100%); 
-                                   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                                   font-size: 2.5rem; margin: 0;">انتهت اللعبة!</h1>
-                    </div>
-                    
-                    <div style="width: 100%; max-width: 550px; background: rgba(30,30,50,0.8); 
-                                padding: 30px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1);
-                                backdrop-filter: blur(10px);">
-                        <h3 style="text-align: center; margin: 0 0 25px 0; color: #a29bfe;">
-                            <i class="fas fa-chart-bar"></i> النتائج النهائية
-                        </h3>
-                        ${rows}
-                    </div>
-                    
-                    <div style="margin-top: 30px; text-align: center;">
-                        <p style="color: rgba(255,255,255,0.6); margin-bottom: 15px;">
-                            العودة التلقائية خلال <span id="back-timer" style="color: #ff7675; font-weight: bold; font-size: 1.3rem;">10</span> ثوانٍ
-                        </p>
-                        <button onclick="window.location.href='/dashboard'" 
-                                style="padding: 15px 40px; background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); 
-                                       color: white; border: none; border-radius: 15px; cursor: pointer; 
-                                       font-weight: bold; font-size: 1.1rem; font-family: 'Cairo', sans-serif;
-                                       box-shadow: 0 10px 30px rgba(108,92,231,0.4); transition: 0.3s;">
-                            <i class="fas fa-home"></i> العودة للرئيسية
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            document.body.insertAdjacentHTML('beforeend', statsHTML);
-
-            let backTime = 10;
-            let backInterval = setInterval(() => {
-                backTime--;
-                const timerEl = document.getElementById('back-timer');
-                if (timerEl) timerEl.innerText = backTime;
-
-                if (backTime <= 0) {
-                    clearInterval(backInterval);
-                    window.location.href = '/dashboard';
-                }
-            }, 1000);
-        }
-
-        function sendChat() {
-            const msgInput = document.getElementById('chat-msg');
-            const msg = msgInput.value.trim();
-            if (msg) {
-                socket.emit('game_chat', { room: lobbyId, user: myUsername, message: msg });
-                msgInput.value = '';
+            function renderTime() {
+                timerDisplay.textContent = String(timeLeft);
+                timerBox.classList.toggle("warning", timeLeft <= 10);
+                timerProgress.style.transform = `scaleX(${Math.max(0, timeLeft / totalTime)})`;
             }
-        }
+            function lockInputs(message) {
+                fields.forEach((input) => { input.disabled = true; });
+                stopButton.disabled = true;
+                gameStatus.textContent = message;
+                gameStatus.classList.add("visible");
+            }
+            function submitAnswers(message) {
+                if (submitted) return;
+                submitted = true;
+                gameEnded = true;
+                window.clearInterval(timerId);
+                submittedAnswers = fields.map((input) => input.value.trim());
+                lockInputs(message);
+                socket.emit("player_finished", { lobby_id: lobbyId, answers: submittedAnswers });
+            }
+            function startTimer() {
+                renderTime();
+                timerId = window.setInterval(() => {
+                    if (gameEnded) {
+                        window.clearInterval(timerId);
+                        return;
+                    }
+                    timeLeft = Math.max(0, timeLeft - 1);
+                    renderTime();
+                    if (timeLeft <= 0) submitAnswers("انتهى الوقت، اتسجلت إجاباتك.");
+                }, 1000);
+            }
+            stopButton.addEventListener("click", () => submitAnswers("إجاباتك اتسجلت. مستنيين باقي اللاعبين."));
+            socket.on("connect", () => {
+                socket.emit("join_lobby", { room: lobbyId });
+                if (submittedAnswers && !resultsReceived) {
+                    socket.emit("player_finished", { lobby_id: lobbyId, answers: submittedAnswers });
+                }
+            });
+            socket.on("disconnect", () => {
+                gameStatus.textContent = "الاتصال انقطع.. بنحاول نرجّعه.";
+                gameStatus.classList.add("visible");
+            });
+            socket.on("connect", () => {
+                if (!gameEnded) gameStatus.classList.remove("visible");
+            });
+            socket.on("stop_game_for_all", () => submitAnswers("الجولة وقفت. إجاباتك اتبعتت."));
+            socket.on("game_submission_requested", () => submitAnswers("الجولة وقفت. إجاباتك اتبعتت."));
+            socket.on("show_results", (data) => showResults(data && data.leaderboard));
 
-        socket.on('receive_game_chat', (data) => {
-            const div = document.createElement('div');
-            div.className = 'chat-msg';
-            div.innerHTML = `<b style="color: #a29bfe;">${data.user}:</b> ${data.message}`;
-            document.getElementById('chat-messages').appendChild(div);
-            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
-        });
+            function addChatMessage(data) {
+                if (!data) return;
+                chatEmpty?.remove();
+                const message = document.createElement("div");
+                const sender = String(data.user ?? "لاعب");
+                message.className = `chat-msg${sender === myUsername ? " is-self" : ""}`;
+                const name = document.createElement("span");
+                name.className = "chat-user";
+                name.textContent = sender;
+                const text = document.createElement("div");
+                text.className = "chat-text";
+                text.textContent = String(data.message ?? "");
+                message.append(name, text);
+                chatMessages.append(message);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            socket.on("receive_game_chat", addChatMessage);
+            document.getElementById("chatForm").addEventListener("submit", (event) => {
+                event.preventDefault();
+                const message = chatInput.value.trim();
+                if (!message || gameEnded) return;
+                socket.emit("game_chat", { room: lobbyId, message });
+                chatInput.value = "";
+                chatInput.focus();
+            });
 
-        window.onload = startTimer;
+            function showResults(leaderboard) {
+                if (resultRedirectId) return;
+                resultsReceived = true;
+                gameEnded = true;
+                submitted = true;
+                window.clearInterval(timerId);
+                lockInputs("انتهت الجولة. شوفوا ترتيبكم!");
+                const board = document.getElementById("leaderboard");
+                board.replaceChildren();
+                const entries = Array.isArray(leaderboard) ? leaderboard : [];
+                entries.forEach((player, index) => {
+                    if (!Array.isArray(player)) return;
+                    const row = document.createElement("div");
+                    row.className = `leader-row${index === 0 ? " is-first" : ""}${String(player[0]) === myUsername ? " is-me" : ""}`;
+                    const rank = document.createElement("span");
+                    rank.className = "rank";
+                    rank.textContent = String(index + 1);
+                    const name = document.createElement("span");
+                    name.className = "leader-name";
+                    name.textContent = String(player[0] ?? "لاعب");
+                    row.append(rank, name);
+                    if (String(player[0]) === myUsername) {
+                        const you = document.createElement("span");
+                        you.className = "you-tag";
+                        you.textContent = "أنت";
+                        row.append(you);
+                    }
+                    const points = document.createElement("span");
+                    points.className = "points";
+                    points.textContent = `${String(player[1] ?? 0)} نقطة`;
+                    row.append(points);
+                    board.append(row);
+                });
+                if (!entries.length) {
+                    const empty = document.createElement("p");
+                    empty.className = "return-copy";
+                    empty.textContent = "النتائج لسه مش جاهزة.";
+                    board.append(empty);
+                }
+                document.getElementById("resultsOverlay").hidden = false;
+                let countdown = 10;
+                const countdownLabel = document.getElementById("back-timer");
+                countdownLabel.textContent = String(countdown);
+                resultRedirectId = window.setInterval(() => {
+                    countdown -= 1;
+                    countdownLabel.textContent = String(Math.max(0, countdown));
+                    if (countdown <= 0) {
+                        window.clearInterval(resultRedirectId);
+                        window.location.href = "/dashboard";
+                    }
+                }, 1000);
+            }
+            startTimer();
+        })();
     </script>
 </body>
 </html>

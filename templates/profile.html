@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>بروفايل | {{ target.username }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -18,14 +19,14 @@
                 <div style="width: 100px; height: 100px; background: #6c5ce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
                     {{ target.username[0] | upper }}
                 </div>
-                <span style="position: absolute; bottom: 5px; right: 5px; height: 18px; width: 18px; border-radius: 50%; border: 3px solid #2f3542;
+                <span id="profile-status-dot" style="position: absolute; bottom: 5px; right: 5px; height: 18px; width: 18px; border-radius: 50%; border: 3px solid #2f3542;
                     background-color: {{ '#2ed573' if target.is_online else '#ff4757' }};
                     box-shadow: 0 0 10px {{ '#2ed573' if target.is_online else '#ff4757' }};">
                 </span>
             </div>
 
             <h2 style="color: white; margin-bottom: 5px;">{{ target.username }}</h2>
-            <p style="color: #a4b0be; font-size: 0.8rem; margin-bottom: 20px;">
+            <p id="profile-status-label" style="color: #a4b0be; font-size: 0.8rem; margin-bottom: 20px;">
                 {{ 'متصل الآن' if target.is_online else 'غير متصل' }}
             </p>
 
@@ -61,5 +62,21 @@
             {% endif %}
         </div>
     </div>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='presence.js') }}"></script>
+    <script>
+        (() => {
+            const targetId = {{ target.id|tojson }};
+            const dot = document.getElementById("profile-status-dot");
+            const label = document.getElementById("profile-status-label");
+            window.familyPresenceSocket?.on("friend_status_change", (data) => {
+                if (Number(data.user_id) !== Number(targetId)) return;
+                const color = data.online ? "#2ed573" : "#ff4757";
+                dot.style.backgroundColor = color;
+                dot.style.boxShadow = `0 0 10px ${color}`;
+                label.textContent = data.online ? "متصل الآن" : "غير متصل";
+            });
+        })();
+    </script>
 </body>
 </html>

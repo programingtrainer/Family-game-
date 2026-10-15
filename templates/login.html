@@ -23,12 +23,12 @@
 
             <div class="input-group">
                 <i class="fas fa-user icon"></i>
-                <input type="text" name="username" placeholder="اسم المستخدم" required>
+                <input type="text" name="username" placeholder="اسم المستخدم" autocomplete="username" required>
             </div>
 
             <div class="input-group">
                 <i class="fas fa-lock icon"></i>
-                <input type="password" id="password" name="password" placeholder="كلمة السر" required>
+                <input type="password" id="password" name="password" placeholder="كلمة السر" autocomplete="current-password" required>
                 <i class="fas fa-eye-slash toggle-password" id="togglePassword"></i>
             </div>
 
@@ -38,6 +38,7 @@
                        name="captcha_answer" 
                        placeholder="اكتب الإجابة هنا" 
                        required 
+                       autocomplete="off"
                        inputmode="numeric" 
                        pattern="[0-9]*" 
                        style="width: 100%; padding: 10px; margin-bottom: 10px; text-align: center;">

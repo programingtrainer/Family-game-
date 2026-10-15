@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FamilyGame | اللوحة الرئيسية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -298,7 +299,7 @@
                 <div style="position: relative;">
                     <button class="icon-btn" id="bellBtn" title="التنبيهات">
                         <i class="fas fa-bell" style="color: #f1c40f;"></i>
-                        {% set total_notes = requests|length %}
+                        {% set total_notes = requests|length + notifications|length %}
                         <span class="badge" id="mainBadge" {% if total_notes == 0 %}style="display:none;"{% endif %}>{{ total_notes }}</span>
                     </button>
                     <div class="notifications-dropdown" id="notifDropdown">
@@ -317,7 +318,12 @@
                                 </div>
                             </div>
                             {% endfor %}
-                            {% if not requests %}
+                            {% for note in notifications %}
+                            <div class="notif-item">
+                                <p><i class="fas fa-bell" style="color: #f1c40f;"></i> {{ note.message }}</p>
+                            </div>
+                            {% endfor %}
+                            {% if not requests and not notifications %}
                             <div class="notif-empty" id="emptyHint">
                                 <i class="fas fa-check-circle"></i>
                                 <p>لا توجد تنبيهات</p>
@@ -354,9 +360,9 @@
             <a href="/inbox" class="action-card inbox">
                 <i class="fas fa-envelope"></i>
                 <span>الرسائل</span>
-                {% if unread_messages_count > 0 %}
-                <span style="background: #ff4757; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">{{ unread_messages_count }}</span>
-                {% endif %}
+                <span id="unreadMessagesBadge" style="background: #ff4757; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; {% if unread_messages_count == 0 %}display:none;{% endif %}">
+                    {{ unread_messages_count }}
+                </span>
             </a>
             <a href="/settings" class="action-card settings">
                 <i class="fas fa-cog"></i>
@@ -372,44 +378,113 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='presence.js') }}"></script>
     <script>
-        const socket = io();
+        const socket = window.familyPresenceSocket || io();
         const bellBtn = document.getElementById('bellBtn');
         const notifDropdown = document.getElementById('notifDropdown');
         const mainBadge = document.getElementById('mainBadge');
-
-        socket.on('connect', () => {
-            socket.emit('join_lobby', { room: "user_{{ user.id }}" });
-        });
+        const msgBadge = document.getElementById('unreadMessagesBadge');
+        const currentUserId = {{ user.id|tojson }};
 
         socket.on('receive_invite', function(data) {
-            console.log("Invite received:", data);
-            mainBadge.style.display = 'block';
-            let count = parseInt(mainBadge.innerText || 0);
-            mainBadge.innerText = count + 1;
-
-            const emptyHint = document.getElementById('emptyHint');
-            if (emptyHint) emptyHint.style.display = 'none';
-
-            const html = `
-                <div class="notif-item invite" id="invite-${data.lobby_id}">
-                    <p><i class="fas fa-gamepad" style="color: #55efc4;"></i> <b>${data.sender_name}</b> يدعوك للعب!</p>
-                    <div class="notif-actions">
-                        <a href="/join_lobby/${data.lobby_id}" class="btn-accept">انضمام</a>
-                        <button class="btn-reject" onclick="this.parentElement.parentElement.remove()">تجاهل</button>
-                    </div>
-                </div>`;
-            document.getElementById('dynamic-invites').insertAdjacentHTML('afterbegin', html);
-
-            try { new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3').play(); } catch(e) {}
+            updateMainBadge(1);
+            addLiveNotification('invite', data.sender_name, data.lobby_id);
+            playNotifSound();
         });
 
-        bellBtn.addEventListener('click', function(e) {
+        socket.on('receive_message', function(data) {
+            if (msgBadge && Number(data.sender_id) !== Number(currentUserId)) {
+                msgBadge.style.display = 'inline-block';
+                let count = parseInt(msgBadge.innerText || 0);
+                msgBadge.innerText = count + 1;
+                playNotifSound();
+            }
+        });
+
+        socket.on('friend_request', function(data) {
+            updateMainBadge(1);
+            addLiveNotification('friend', data.from_username, data.request_id);
+            playNotifSound();
+        });
+        socket.on('friend_accepted', function(data) {
+            updateMainBadge(1);
+            addLiveNotification('accepted', data.username, null);
+            playNotifSound();
+        });
+
+        function addLiveNotification(type, name, id) {
+            const body = document.getElementById('dynamic-invites');
+            const emptyHint = document.getElementById('emptyHint');
+            if (!body) return;
+            if (emptyHint) emptyHint.remove();
+
+            const item = document.createElement('div');
+            item.className = `notif-item ${type === 'invite' ? 'invite' : ''}`;
+            const text = document.createElement('p');
+            const icon = document.createElement('i');
+            icon.className = type === 'invite' ? 'fas fa-gamepad' : (type === 'accepted' ? 'fas fa-user-check' : 'fas fa-user-plus');
+            icon.style.color = type === 'invite' ? '#55efc4' : (type === 'accepted' ? '#55efc4' : '#a29bfe');
+            const sender = document.createElement('b');
+            sender.textContent = String(name || '');
+            text.append(icon, document.createTextNode(' '), sender,
+                document.createTextNode(type === 'invite' ? ' يدعوك للعب' : (type === 'accepted' ? ' وافق على طلب صداقتك' : ' يريد إضافتك كصديق')));
+
+            const actions = document.createElement('div');
+            actions.className = 'notif-actions';
+            if (type === 'invite' || type === 'friend') {
+                const accept = document.createElement('a');
+                accept.className = 'btn-accept';
+                accept.href = type === 'invite' ? `/join_lobby/${encodeURIComponent(id)}` : `/accept_friend/${encodeURIComponent(id)}`;
+                accept.textContent = type === 'invite' ? 'انضمام' : 'قبول';
+                actions.appendChild(accept);
+            }
+            if (type === 'invite') {
+                const dismiss = document.createElement('button');
+                dismiss.className = 'btn-reject';
+                dismiss.textContent = 'تجاهل';
+                dismiss.addEventListener('click', () => removeNotif(dismiss));
+                actions.appendChild(dismiss);
+            } else if (type === 'friend') {
+                const reject = document.createElement('a');
+                reject.className = 'btn-reject';
+                reject.href = `/reject_friend/${encodeURIComponent(id)}`;
+                reject.textContent = 'رفض';
+                actions.appendChild(reject);
+            }
+            item.append(text, actions);
+            body.prepend(item);
+        }
+
+        function updateMainBadge(val) {
+            if (!mainBadge) return;
+            mainBadge.style.display = 'block';
+            let count = parseInt(mainBadge.innerText || 0);
+            mainBadge.innerText = count + val;
+        }
+
+        function playNotifSound() {
+            try {
+                const sound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+                sound.play().catch(() => {});
+            } catch(e) {}
+        }
+
+        function removeNotif(btn) {
+            btn.parentElement.parentElement.remove();
+            if (!mainBadge) return;
+            let count = parseInt(mainBadge.innerText || 0);
+            if (count > 1) mainBadge.innerText = count - 1;
+            else mainBadge.style.display = 'none';
+        }
+
+        // فتح وإغلاق قائمة التنبيهات
+        bellBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             notifDropdown.classList.toggle('show');
         });
 
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', (e) => {
             if (!notifDropdown.contains(e.target) && e.target !== bellBtn) {
                 notifDropdown.classList.remove('show');
             }

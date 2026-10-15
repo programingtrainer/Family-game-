@@ -1,0 +1,1 @@
+- [Socket.IO behind Replit proxy](replit-socketio-origin.md) — allow exact preview origins, including the proxied `:8080` port; avoid wildcard CORS.

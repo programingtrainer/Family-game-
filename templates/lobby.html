@@ -1,469 +1,473 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4efe6">
     <title>FamilyGame | غرفة التحدي</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            color-scheme: light;
+            --paper: #f4efe6;
+            --paper-deep: #e9e0d3;
+            --card: #fffdf9;
+            --ink: #272126;
+            --muted: #817872;
+            --line: #e8dfd5;
+            --plum: #563b50;
+            --plum-deep: #422d3e;
+            --coral: #df684e;
+            --coral-deep: #bd4f3d;
+            --teal: #286f67;
+            --teal-pale: #e2f0ea;
+            --gold: #c58a35;
+            --shadow: 0 18px 50px rgba(58, 40, 48, .08);
+        }
         * { box-sizing: border-box; }
-        body { 
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            min-height: 100vh;
-            color: white; 
-            font-family: 'Cairo', 'Segoe UI', sans-serif; 
-            margin: 0; 
-            padding: 0;
-            overflow-x: hidden;
-        }
-
-        .lobby-wrapper {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 25px;
-            min-height: 100vh;
-        }
-
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0,0,0,0.25);
-            padding: 18px 30px;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.08);
-            backdrop-filter: blur(15px);
-            margin-bottom: 30px;
-        }
-
-        .back-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.15);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-        }
-        .back-btn:hover {
-            background: rgba(255,255,255,0.2);
-            transform: translateX(5px);
-        }
-
-        .host-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .host-avatar {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-        .host-name {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #55efc4;
-        }
-        .host-label {
-            font-size: 0.85rem;
-            color: rgba(255,255,255,0.6);
-        }
-
-        .page-title {
-            text-align: center;
-            margin: 0 0 40px 0;
-        }
-        .page-title h1 {
-            font-size: 2.8rem;
+        body {
             margin: 0;
-            background: linear-gradient(135deg, #fff 0%, #a29bfe 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            min-height: 100vh;
+            color: var(--ink);
+            background:
+                radial-gradient(ellipse at 12% 8%, rgba(223,104,78,.10), transparent 25rem),
+                radial-gradient(ellipse at 88% 70%, rgba(40,111,103,.08), transparent 28rem),
+                var(--paper);
+            font-family: "Cairo", sans-serif;
         }
-        .page-title p {
-            color: rgba(255,255,255,0.5);
-            margin: 10px 0 0 0;
-            font-size: 1rem;
+        button, select { font: inherit; }
+        button:focus-visible, select:focus-visible, a:focus-visible {
+            outline: 3px solid rgba(223,104,78,.45);
+            outline-offset: 3px;
         }
-
-        .lobby-grid {
-            display: grid;
-            grid-template-columns: 1fr 1.4fr 1fr;
-            gap: 25px;
-            margin-bottom: 30px;
+        .shell { width: min(1280px, 100%); margin: auto; padding: 24px 30px 54px; }
+        .topbar { display:flex; align-items:center; justify-content:space-between; gap:18px; }
+        .brand { display:flex; align-items:center; gap:11px; color:var(--ink); text-decoration:none; font-weight:900; letter-spacing:-.04em; }
+        .brand-mark { width:38px; height:38px; display:grid; place-items:center; color:#fff; background:var(--plum); border-radius:13px 13px 13px 4px; box-shadow:0 6px 14px rgba(86,59,80,.18); }
+        .brand-name { font-size:1rem; }
+        .top-actions { display:flex; align-items:center; gap:12px; }
+        .connection { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:.82rem; }
+        .connection-dot { width:8px; height:8px; border-radius:50%; background:#c4b9ae; transition:background .2s ease; }
+        .connection.is-online .connection-dot { background:var(--teal); }
+        .back-link { display:inline-flex; align-items:center; gap:9px; padding:10px 15px; border:1px solid var(--line); border-radius:12px; color:var(--plum); background:rgba(255,253,249,.62); text-decoration:none; font-weight:700; transition:transform .2s ease, background .2s ease; }
+        .back-link:hover { transform:translateY(-2px); background:var(--card); }
+        .intro { position:relative; display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin:50px 0 28px; }
+        .intro-copy { max-width:700px; }
+        .eyebrow { display:flex; align-items:center; gap:9px; margin:0 0 8px; color:var(--coral-deep); font-size:.78rem; font-weight:800; letter-spacing:.08em; }
+        .eyebrow::before { content:""; width:24px; height:2px; background:var(--coral); }
+        h1 { margin:0; font-size:clamp(2.2rem,5vw,4.15rem); line-height:1.12; letter-spacing:-.06em; font-weight:900; }
+        .intro p { margin:11px 0 0; color:var(--muted); font-size:1rem; }
+        .room-code { flex:none; padding:11px 16px; border:1px dashed #c9bcae; border-radius:14px; background:rgba(255,253,249,.58); text-align:center; }
+        .room-code-label { display:block; color:var(--muted); font-size:.7rem; font-weight:700; }
+        .room-code strong { display:block; color:var(--plum); direction:ltr; letter-spacing:.13em; font:800 1.15rem/1.4 "Cairo",sans-serif; }
+        .lobby-grid { display:grid; grid-template-columns:minmax(240px,.9fr) minmax(330px,1.2fr) minmax(250px,.9fr); gap:18px; align-items:stretch; }
+        .panel { overflow:hidden; min-height:440px; border:1px solid rgba(86,59,80,.09); border-radius:22px; background:var(--card); box-shadow:var(--shadow); animation:rise .55s both; }
+        .panel:nth-child(2) { animation-delay:.07s; }
+        .panel:nth-child(3) { animation-delay:.14s; }
+        .panel-head { display:flex; align-items:center; gap:11px; padding:19px 21px; border-bottom:1px solid var(--line); }
+        .head-icon { width:36px; height:36px; display:grid; place-items:center; border-radius:12px; background:var(--teal-pale); color:var(--teal); }
+        .panel-head h2 { margin:0; font-size:1.04rem; font-weight:800; }
+        .count { margin-inline-start:auto; min-width:31px; padding:3px 9px; border-radius:20px; color:var(--teal); background:var(--teal-pale); text-align:center; font-size:.82rem; font-weight:800; }
+        .panel-body { padding:16px; }
+        .players-list, .friends-list { display:grid; gap:9px; }
+        .player-row { display:flex; align-items:center; gap:11px; min-width:0; padding:12px; border:1px solid #eee7df; border-radius:15px; background:#fff; animation:rise .25s both; }
+        .player-row.is-host { border-color:#e9d9ba; background:linear-gradient(105deg,#fffaf0,#fff); }
+        .avatar { flex:none; width:39px; height:39px; display:grid; place-items:center; border-radius:13px; color:var(--plum); background:#f1e9ef; font-weight:900; }
+        .player-row.is-host .avatar { color:#986922; background:#f8edda; }
+        .player-name { overflow:hidden; flex:1; text-overflow:ellipsis; white-space:nowrap; font-size:.9rem; font-weight:800; }
+        .player-tag { flex:none; color:var(--muted); font-size:.7rem; font-weight:700; }
+        .player-row.is-host .player-tag { color:#a4772d; }
+        .player-kick { flex:none; border:1px solid #efd1ca; border-radius:9px; padding:6px 9px; color:#a64338; background:#fff3f0; font:inherit; font-size:.72rem; font-weight:800; cursor:pointer; }
+        .player-kick:hover { color:#fff; background:#a64338; }
+        .empty-note { display:grid; place-items:center; min-height:220px; padding:24px; color:var(--muted); text-align:center; }
+        .empty-note i { margin-bottom:12px; color:#b9aaa1; font-size:1.8rem; }
+        .empty-note p { margin:0; line-height:1.8; }
+        .config-panel { display:flex; flex-direction:column; border-color:rgba(86,59,80,.13); background:var(--plum); color:#fffaf4; }
+        .config-panel .panel-head { border-color:rgba(255,255,255,.13); }
+        .config-panel .head-icon { color:#ffcfaa; background:rgba(255,255,255,.12); }
+        .config-panel .panel-head h2 { color:#fffaf4; }
+        .config-content { flex:1; padding:30px clamp(20px,4vw,42px) 18px; text-align:center; }
+        .timer-art { width:72px; height:72px; display:grid; place-items:center; margin:0 auto 18px; border:1px solid rgba(255,255,255,.22); border-radius:23px; color:#ffb59b; background:rgba(255,255,255,.09); font-size:1.7rem; transform:rotate(-5deg); }
+        .config-content h3 { margin:0; font-size:1.35rem; }
+        .config-content p { max-width:300px; margin:7px auto 19px; color:rgba(255,250,244,.68); font-size:.85rem; line-height:1.8; }
+        .select-wrap { position:relative; max-width:320px; margin:auto; }
+        .timer-select { width:100%; appearance:none; padding:13px 16px; border:1px solid rgba(255,255,255,.22); border-radius:13px; color:#fffaf4; background:#62465c; cursor:pointer; }
+        .timer-select option { color:var(--ink); background:#fffdf9; }
+        .select-wrap i { position:absolute; top:50%; left:16px; pointer-events:none; color:#ffcfaa; transform:translateY(-50%); }
+        .timer-select:disabled { opacity:.75; cursor:not-allowed; }
+        .start-area { padding:0 24px 24px; }
+        .start-btn { width:100%; min-height:58px; display:flex; align-items:center; justify-content:center; gap:12px; border:0; border-radius:15px; color:white; background:var(--coral); box-shadow:0 9px 22px rgba(24,10,20,.2); font-weight:900; font-size:1.02rem; cursor:pointer; transition:transform .2s ease, background .2s ease, box-shadow .2s ease; }
+        .start-btn:hover:not(:disabled) { background:var(--coral-deep); box-shadow:0 12px 26px rgba(24,10,20,.27); transform:translateY(-2px); }
+        .start-btn:disabled { opacity:.62; cursor:wait; }
+        .waiting-state { display:flex; align-items:center; gap:12px; padding:15px; border:1px solid rgba(255,255,255,.14); border-radius:14px; color:rgba(255,250,244,.82); background:rgba(255,255,255,.08); text-align:right; }
+        .waiting-state i { color:#ffbe9d; font-size:1.2rem; }
+        .waiting-state span { font-size:.82rem; line-height:1.7; }
+        .friend-row { display:flex; align-items:center; gap:10px; padding:10px; border:1px solid #eee7df; border-radius:14px; background:#fff; }
+        .friend-status { position:relative; flex:none; width:9px; height:9px; border-radius:50%; background:#c9c1bb; }
+        .friend-status.online { background:#3e927e; box-shadow:0 0 0 4px #e3f1ec; }
+        .friend-copy { flex:1; min-width:0; }
+        .friend-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.84rem; font-weight:800; }
+        .friend-meta { color:var(--muted); font-size:.69rem; }
+        .level { color:#a4772d; }
+        .invite-btn { flex:none; padding:7px 10px; border:1px solid #ead9d2; border-radius:10px; color:var(--coral-deep); background:#fff7f3; font-size:.75rem; font-weight:800; cursor:pointer; transition:background .2s ease, color .2s ease, transform .2s ease; }
+        .invite-btn:hover:not(:disabled) { color:#fff; background:var(--coral); transform:translateY(-1px); }
+        .invite-btn:disabled { color:var(--teal); border-color:#d7e9e2; background:#edf6f2; cursor:default; }
+        .invite-btn:disabled .invite-label { display:none; }
+        .invite-btn:disabled::after { content:"تمت"; }
+        .friends-link { display:inline-flex; gap:7px; align-items:center; margin:12px 3px 0; color:var(--plum); font-size:.8rem; font-weight:800; text-decoration:none; }
+        .friends-link:hover { color:var(--coral-deep); }
+        .toast { position:fixed; z-index:20; inset:auto 50% 24px auto; max-width:min(90vw,420px); padding:12px 18px; border:1px solid rgba(255,255,255,.25); border-radius:13px; color:white; background:var(--plum-deep); box-shadow:0 12px 32px rgba(39,33,38,.2); opacity:0; pointer-events:none; transform:translate(50%,12px); transition:opacity .2s ease,transform .2s ease; }
+        .toast.show { opacity:1; transform:translate(50%,0); }
+        .toast.error { background:#a64338; }
+        @keyframes rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @media (max-width:1020px) { .lobby-grid { grid-template-columns:1fr 1fr; } .config-panel { grid-column:1 / -1; grid-row:1; min-height:0; } .panel:not(.config-panel) { min-height:340px; } }
+        @media (max-width:680px) {
+            .shell { padding:17px 15px 34px; }
+            .topbar { align-items:flex-start; }
+            .connection { display:none; }
+            .back-link { padding:9px 11px; font-size:.8rem; }
+            .intro { display:block; margin:36px 0 22px; }
+            .intro p { font-size:.9rem; }
+            .room-code { display:inline-block; margin-top:15px; }
+            .lobby-grid { grid-template-columns:1fr; gap:14px; }
+            .config-panel { grid-column:auto; grid-row:auto; }
+            .panel { min-height:auto; border-radius:18px; }
+            .panel:not(.config-panel) { min-height:0; }
+            .players-list { grid-template-columns:1fr 1fr; }
+            .player-row { padding:9px; gap:8px; }
+            .player-tag { font-size:.63rem; }
+            .panel-body { padding:13px; }
+            .config-content { padding:24px 20px 15px; }
+            .timer-art { width:60px; height:60px; margin-bottom:13px; border-radius:19px; }
         }
-
-        .panel {
-            background: rgba(30, 35, 45, 0.85);
-            border-radius: 24px;
-            border: 1px solid rgba(255,255,255,0.08);
-            backdrop-filter: blur(20px);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            min-height: 400px;
+        @media (max-width:380px) { .players-list { grid-template-columns:1fr; } .brand-name { font-size:.9rem; } }
+        @media (prefers-reduced-motion:reduce) {
+            *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
         }
-
-        .panel-header {
-            padding: 20px 25px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .panel-header h3 { margin: 0; font-size: 1.1rem; }
-        .panel-header .count {
-            margin-right: auto;
-            background: rgba(255,255,255,0.1);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-        }
-
-        .panel-body { padding: 20px; flex: 1; overflow-y: auto; }
-
-        .player-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 14px 18px;
-            background: rgba(255,255,255,0.04);
-            border-radius: 16px;
-            margin-bottom: 12px;
-            border-right: 4px solid #55efc4;
-            animation: playerSlide 0.4s ease-out;
-        }
-        .player-item.host {
-            background: linear-gradient(135deg, rgba(108,92,231,0.2) 0%, rgba(162,155,254,0.1) 100%);
-            border-right-color: #fdcb6e;
-        }
-        .player-avatar {
-            width: 45px; height: 45px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .player-name { font-weight: 600; flex: 1; }
-        .player-badge {
-            background: rgba(253,203,110,0.2);
-            color: #fdcb6e;
-            padding: 4px 10px;
-            border-radius: 8px;
-            font-size: 0.75rem;
-        }
-        .kick-btn {
-            background: rgba(255,71,87,0.2);
-            color: #ff4757;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            transition: 0.3s;
-        }
-        .kick-btn:hover {
-            background: #ff4757;
-            color: white;
-        }
-
-        @keyframes playerSlide {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .game-config { text-align: center; padding: 30px; }
-        .timer-icon {
-            width: 100px; height: 100px;
-            background: linear-gradient(135deg, rgba(162,155,254,0.3) 0%, rgba(108,92,231,0.2) 100%);
-            border-radius: 25px;
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 25px auto;
-            font-size: 2.5rem; color: #a29bfe;
-            border: 2px solid rgba(162,155,254,0.3);
-        }
-        .timer-select {
-            width: 100%; max-width: 320px;
-            padding: 18px 25px; border-radius: 16px;
-            background: rgba(0,0,0,0.3); color: #55efc4;
-            border: 2px solid rgba(162,155,254,0.3);
-            font-family: 'Cairo', sans-serif; font-weight: 600;
-            font-size: 1rem;
-            outline: none;
-        }
-        .timer-select option { background: #1e232d; color: #fff; }
-
-        .start-btn {
-            width: 100%; padding: 22px;
-            background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
-            color: white; border: none; border-radius: 18px;
-            font-size: 1.5rem; font-weight: 700; cursor: pointer;
-            font-family: 'Cairo', sans-serif;
-            box-shadow: 0 10px 30px rgba(214,48,49,0.3);
-            transition: 0.3s;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-        }
-        .start-btn:hover { transform: translateY(-3px); filter: brightness(1.1); }
-        .start-btn:disabled { background: #636e72; cursor: not-allowed; transform: none; }
-
-        .friend-item {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 12px; background: rgba(255,255,255,0.03);
-            border-radius: 14px; margin-bottom: 10px;
-            transition: 0.3s;
-        }
-        .friend-item:hover { background: rgba(255,255,255,0.06); }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
-        .status-dot.online { background: #2ed573; box-shadow: 0 0 10px #2ed573; animation: pulse 2s infinite; }
-        .status-dot.offline { background: #636e72; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-        .invite-btn {
-            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-            border: none; color: white;
-            padding: 8px 16px; border-radius: 10px;
-            cursor: pointer; font-weight: 600;
-            font-family: 'Cairo', sans-serif;
-            transition: 0.3s;
-        }
-        .invite-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(108,92,231,0.4); }
-        .invite-btn.sent { background: #2ed573; }
-        .invite-btn:disabled { cursor: default; }
-
-        .empty-state {
-            text-align: center; padding: 40px; color: rgba(255,255,255,0.4);
-        }
-        .empty-state i { font-size: 2.5rem; margin-bottom: 15px; display: block; }
-
-        @media (max-width: 1100px) { .lobby-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <div class="lobby-wrapper">
-        <div class="top-bar">
-            <a href="/dashboard" class="back-btn"><i class="fas fa-arrow-right"></i> العودة</a>
-            <div class="host-info">
-                <div>
-                    <div class="host-label">الحالة</div>
-                    <div class="host-name">{% if is_host %}كابتن الغرفة{% else %}لاعب{% endif %}</div>
+    <main class="shell">
+        <header class="topbar">
+            <a class="brand" href="/dashboard" aria-label="العودة إلى الرئيسية">
+                <span class="brand-mark"><i class="fa-solid fa-shapes" aria-hidden="true"></i></span>
+                <span class="brand-name">FamilyGame</span>
+            </a>
+            <div class="top-actions">
+                <div class="connection" id="connectionStatus" aria-live="polite">
+                    <span class="connection-dot"></span><span id="connectionLabel">جارٍ الاتصال</span>
                 </div>
-                <div class="host-avatar">
-                    <i class="fas {% if is_host %}fa-crown{% else %}fa-user{% endif %}" style="color: #fdcb6e;"></i>
-                </div>
+                <a href="/dashboard" class="back-link"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> العودة</a>
             </div>
-        </div>
+        </header>
 
-        <div class="page-title">
-            <h1><i class="fas fa-gamepad"></i> غرفة التحدي</h1>
-            <p>كود الغرفة: <span style="color: #a29bfe; font-weight: bold;">{{ lobby_id }}</span></p>
-        </div>
+        <section class="intro" aria-labelledby="pageTitle">
+            <div class="intro-copy">
+                <p class="eyebrow">اللعب أحلى مع اللمة</p>
+                <h1 id="pageTitle">غرفة التحدّي</h1>
+                <p>لمّ أصحابك، اختاروا الوقت، واستعدّوا لأول حرف.</p>
+            </div>
+            <div class="room-code">
+                <span class="room-code-label">كود الغرفة</span>
+                <strong>{{ lobby_id }}</strong>
+            </div>
+        </section>
 
-        <div class="lobby-grid">
-            <div class="panel">
-                <div class="panel-header" style="border-right: 4px solid #55efc4;">
-                    <i class="fas fa-users" style="color: #55efc4;"></i>
-                    <h3>الفريق</h3>
-                    <span class="count" id="playersCount">1</span>
+        <section class="lobby-grid" aria-label="إعدادات الغرفة">
+            <section class="panel team-panel" aria-labelledby="teamHeading">
+                <div class="panel-head">
+                    <span class="head-icon"><i class="fa-solid fa-people-group" aria-hidden="true"></i></span>
+                    <h2 id="teamHeading">اللاعبون</h2>
+                    <span class="count" id="playersCount" aria-live="polite">1</span>
                 </div>
-                <div class="panel-body" id="playersList">
-                    <div class="player-item host" id="player-{{ user.username }}">
-                        <div class="player-avatar"><i class="fas fa-crown" style="color: #fdcb6e;"></i></div>
-                        <span class="player-name">{{ user.username }}</span>
-                        <span class="player-badge">{% if is_host %}المضيف{% else %}انت{% endif %}</span>
+                <div class="panel-body">
+                    <div class="players-list" id="playersList">
+                        <div class="player-row{% if is_host %} is-host{% endif %}" data-user-id="{{ user.id }}">
+                            <span class="avatar"><i class="fa-solid {% if is_host %}fa-crown{% else %}fa-user{% endif %}" aria-hidden="true"></i></span>
+                            <span class="player-name">{{ user.username }}</span>
+                            <span class="player-tag">{% if is_host %}المضيف{% else %}أنت{% endif %}</span>
+                        </div>
+                    </div>
+                    <div class="empty-note" id="playersEmpty" hidden>
+                        <div><i class="fa-solid fa-user-group" aria-hidden="true"></i><p>بانتظار انضمام اللاعبين</p></div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div class="panel center-panel">
-                <div class="game-config">
-                    <div class="timer-icon"><i class="fas fa-stopwatch"></i></div>
-                    <h2 style="margin-bottom: 20px; color: #fff;">وقت الإجابة</h2>
-                    <select class="timer-select" id="gameTimer" {% if not is_host %}disabled{% endif %}>
-                        <option value="30">30 ثانية - سريع</option>
-                        <option value="60" selected>60 ثانية - متوازن</option>
-                        <option value="90">90 ثانية - طويل</option>
-                    </select>
+            <section class="panel config-panel" aria-labelledby="configHeading">
+                <div class="panel-head">
+                    <span class="head-icon"><i class="fa-solid fa-bolt" aria-hidden="true"></i></span>
+                    <h2 id="configHeading">جاهزين للتحدّي؟</h2>
                 </div>
-                <div style="padding: 30px; margin-top: auto;">
+                <div class="config-content">
+                    <div class="timer-art"><i class="fa-regular fa-clock" aria-hidden="true"></i></div>
+                    <h3>اختاروا وقت الجولة</h3>
+                    <p>ستة تصنيفات، حرف واحد، وأسرع إجابة تكسب.</p>
+                    <div class="select-wrap">
+                        <select class="timer-select" id="gameTimer" aria-label="مدة الجولة" {% if not is_host %}disabled{% endif %}>
+                            <option value="30">٣٠ ثانية · جولة خاطفة</option>
+                            <option value="60" selected>٦٠ ثانية · وقت متوازن</option>
+                            <option value="90">٩٠ ثانية · على راحتكم</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                    </div>
+                </div>
+                <div class="start-area">
                     {% if is_host %}
-                    <button class="start-btn" id="startBtn" onclick="startGame()">
-                        <span>ابدأ التحدي!</span>
-                        <i class="fas fa-rocket"></i>
+                    <button class="start-btn" id="startBtn" type="button">
+                        <span>ابدأوا اللعب</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
                     </button>
                     {% else %}
-                    <div style="text-align: center; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 15px;">
-                        <i class="fas fa-hourglass-half" style="font-size: 2rem; color: #a29bfe; margin-bottom: 10px;"></i>
-                        <p style="color: rgba(255,255,255,0.7); margin: 0;">في انتظار المضيف لبدء اللعبة...</p>
+                    <div class="waiting-state" role="status">
+                        <i class="fa-regular fa-hourglass-half" aria-hidden="true"></i>
+                        <span>أنت جاهز. المضيف هيبدأ الجولة أول ما الكل يبقى مستعد.</span>
                     </div>
                     {% endif %}
                 </div>
-            </div>
+            </section>
 
-            <div class="panel">
-                <div class="panel-header" style="border-right: 4px solid #a29bfe;">
-                    <i class="fas fa-user-plus" style="color: #a29bfe;"></i>
-                    <h3>دعوة الأصدقاء</h3>
+            <section class="panel friends-panel" aria-labelledby="friendsHeading">
+                <div class="panel-head">
+                    <span class="head-icon" style="color:var(--coral-deep);background:#fff0e9"><i class="fa-solid fa-user-plus" aria-hidden="true"></i></span>
+                    <h2 id="friendsHeading">عزومة الصحاب</h2>
                 </div>
                 <div class="panel-body">
                     {% if is_host %}
                         {% if friends %}
+                        <div class="friends-list" id="friendsList">
                             {% for friend in friends %}
-                            <div class="friend-item">
-                                <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div class="status-dot {% if friend.is_online %}online{% else %}offline{% endif %}"></div>
-                                    <div>
-                                        <div style="font-weight: 600;">{{ friend.username }}</div>
-                                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">{% if friend.is_online %}متصل{% else %}غير متصل{% endif %}</div>
-                                    </div>
+                            <div class="friend-row" data-friend-id="{{ friend.id }}">
+                                <span class="friend-status{% if friend.is_online %} online{% endif %}" id="friend-status-{{ friend.id }}" aria-label="{% if friend.is_online %}متصل{% else %}غير متصل{% endif %}"></span>
+                                <div class="friend-copy">
+                                    <div class="friend-name">{{ friend.username }}</div>
+                                    <div class="friend-meta"><span id="friend-presence-{{ friend.id }}">{% if friend.is_online %}متصل الآن{% else %}غير متصل{% endif %}</span>{% if friend.level is defined %} <span class="level">· المستوى {{ friend.level }}</span>{% endif %}</div>
                                 </div>
-                                {% if friend.is_online %}
-                                <button class="invite-btn" id="btn-{{ friend.id }}" onclick="sendInvite('{{ friend.id }}', '{{ friend.username }}')">دعوة</button>
-                                {% endif %}
+                                <button class="invite-btn" type="button" data-invite-id="{{ friend.id }}" {% if not friend.is_online %}hidden{% endif %} aria-label="دعوة {{ friend.username }}"><span class="invite-label">ادعُه</span></button>
                             </div>
                             {% endfor %}
+                        </div>
                         {% else %}
-                            <div class="empty-state">
-                                <i class="fas fa-user-friends"></i>
-                                <p>لا يوجد أصدقاء</p>
-                                <a href="/friends" style="color: #a29bfe;">أضف أصدقاء</a>
-                            </div>
+                        <div class="empty-note">
+                            <div><i class="fa-solid fa-user-plus" aria-hidden="true"></i><p>لسه ما عندكش أصحاب هنا.<br>ضيف أصحابك وخلي اللمة تكبر.</p><a class="friends-link" href="/friends">إضافة أصدقاء <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a></div>
+                        </div>
                         {% endif %}
                     {% else %}
-                        <div class="empty-state">
-                            <i class="fas fa-lock"></i>
-                            <p>المضيف فقط يمكنه دعوة الأصدقاء</p>
-                        </div>
+                    <div class="empty-note">
+                        <div><i class="fa-solid fa-lock" aria-hidden="true"></i><p>دعوة الأصدقاء متاحة لمضيف الغرفة.</p></div>
+                    </div>
                     {% endif %}
                 </div>
-            </div>
-        </div>
-    </div>
+            </section>
+        </section>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='presence.js') }}"></script>
     <script>
-        const socket = io();
-        const lobby_id = "{{ lobby_id }}";
-        const isHost = {{ 'true' if is_host else 'false' }};
-        const myUsername = "{{ user.username }}";
-        const myUserId = "{{ user.id }}";
-        let playerCount = 1;
-        let players = [myUsername];
+        (() => {
+            const lobbyId = {{ lobby_id|tojson }};
+            const isHost = {{ is_host|tojson }};
+            const myUsername = {{ user.username|tojson }};
+            const myUserId = {{ user.id|tojson }};
+            const socket = window.familyPresenceSocket || io();
+            const playersList = document.getElementById("playersList");
+            const playersCount = document.getElementById("playersCount");
+            const playersEmpty = document.getElementById("playersEmpty");
+            const connectionStatus = document.getElementById("connectionStatus");
+            const connectionLabel = document.getElementById("connectionLabel");
+            const toast = document.getElementById("toast");
+            const playerById = new Map();
+            let toastTimer;
+            playerById.set(String(myUserId), { id: myUserId, username: myUsername });
 
-        socket.on('connect', () => {
-            console.log("Connected to server");
-            socket.emit('join_lobby', { room: lobby_id });
-            socket.emit('join_lobby', { room: "user_" + myUserId });
-
-            if (!isHost) {
-                socket.emit('player_joined_lobby', {
-                    lobby_id: lobby_id,
-                    username: myUsername,
-                    user_id: myUserId
+            function notify(message, isError = false) {
+                toast.textContent = message;
+                toast.classList.toggle("error", isError);
+                toast.classList.add("show");
+                window.clearTimeout(toastTimer);
+                toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2800);
+            }
+            function updateCount() {
+                playersCount.textContent = String(playerById.size);
+                playersEmpty.hidden = playerById.size !== 0;
+            }
+            function makePlayer(player) {
+                const id = String(player.id ?? player.user_id ?? "");
+                const username = String(player.username ?? "لاعب");
+                if (!id || playerById.has(id)) return;
+                playerById.set(id, { id, username });
+                const row = document.createElement("div");
+                row.className = "player-row";
+                row.dataset.userId = id;
+                const avatar = document.createElement("span");
+                avatar.className = "avatar";
+                const icon = document.createElement("i");
+                icon.className = "fa-solid fa-user";
+                icon.setAttribute("aria-hidden", "true");
+                avatar.append(icon);
+                const name = document.createElement("span");
+                name.className = "player-name";
+                name.textContent = username;
+                const tag = document.createElement("span");
+                tag.className = "player-tag";
+                tag.textContent = "جاهز";
+                row.append(avatar, name, tag);
+                if (isHost && id !== String(window.hostId)) {
+                    const kick = document.createElement("button");
+                    kick.className = "player-kick";
+                    kick.type = "button";
+                    kick.dataset.kickId = id;
+                    kick.textContent = "إزالة";
+                    row.append(kick);
+                }
+                playersList.append(row);
+                updateCount();
+            }
+            function removePlayer(player) {
+                const id = String(player.user_id ?? player.id ?? "");
+                let row = id ? playersList.querySelector(`[data-user-id="${CSS.escape(id)}"]`) : null;
+                if (!row && player.username) {
+                    for (const candidate of playersList.querySelectorAll(".player-row")) {
+                        if (candidate.querySelector(".player-name")?.textContent === String(player.username)) {
+                            row = candidate;
+                            const rowId = candidate.dataset.userId;
+                            if (rowId) playerById.delete(rowId);
+                            break;
+                        }
+                    }
+                } else if (id) playerById.delete(id);
+                if (row) row.remove();
+                updateCount();
+            }
+            function syncPlayers(list) {
+                if (!Array.isArray(list)) return;
+                playerById.clear();
+                playersList.replaceChildren();
+                list.forEach((player) => {
+                    const id = String(player.id ?? player.user_id ?? "");
+                    const username = String(player.username ?? "لاعب");
+                    if (!id) return;
+                    playerById.set(id, { id, username });
+                    const row = document.createElement("div");
+                    row.className = `player-row${String(id) === String(myUserId) && isHost ? " is-host" : ""}`;
+                    row.dataset.userId = id;
+                    const avatar = document.createElement("span");
+                    avatar.className = "avatar";
+                    const icon = document.createElement("i");
+                    icon.className = `fa-solid ${String(id) === String(myUserId) && isHost ? "fa-crown" : "fa-user"}`;
+                    icon.setAttribute("aria-hidden", "true");
+                    avatar.append(icon);
+                    const name = document.createElement("span");
+                    name.className = "player-name";
+                    name.textContent = username;
+                    const tag = document.createElement("span");
+                    tag.className = "player-tag";
+                    tag.textContent = String(id) === String(myUserId) ? (isHost ? "المضيف" : "أنت") : (String(player.id) === String(window.hostId) ? "المضيف" : "جاهز");
+                    row.append(avatar, name, tag);
+                    if (isHost && String(id) !== String(window.hostId)) {
+                        const kick = document.createElement("button");
+                        kick.className = "player-kick";
+                        kick.type = "button";
+                        kick.dataset.kickId = id;
+                        kick.textContent = "إزالة";
+                        row.append(kick);
+                    }
+                    playersList.append(row);
                 });
+                updateCount();
             }
-        });
-
-        socket.on('redirect_to_game', function(data) {
-            // توحيد الاسم ليكون timer والحرف letter
-            window.location.href = `/game/${data.lobby_id}?timer=${data.timer}&letter=${data.letter}`;
-        });
-
-        function sendInvite(friendId, friendName) {
-            socket.emit('send_invite', {
-                target_id: friendId,
-                sender_name: myUsername,
-                lobby_id: lobby_id
+            socket.on("connect", () => {
+                connectionStatus.classList.add("is-online");
+                connectionLabel.textContent = "متصل";
+                socket.emit("join_lobby", { room: lobbyId });
             });
-            const btn = document.getElementById('btn-' + friendId);
-            btn.innerText = "تم الإرسال";
-            btn.disabled = true;
-            btn.classList.add('sent');
-        }
-
-        function startGame() {
-            const timerSelect = document.getElementById('gameTimer'); // تأكد إن ده الـ ID بتاع القائمة
-            const selectedTimer = timerSelect.value; 
-
-            socket.emit('start_game_event', {
-                lobby_id: lobby_id,
-                timer: selectedTimer // هنا بنبعت الـ 90 أو الـ 120
+            socket.on("disconnect", () => {
+                connectionStatus.classList.remove("is-online");
+                connectionLabel.textContent = "انقطع الاتصال";
             });
-        }
-
-        function kickPlayer(username, oderId) {
-            if (confirm("هل تريد إزالة " + username + " من اللعبة؟")) {
-                socket.emit('kick_player', {
-                    lobby_id: lobby_id,
-                    username: username,
-                    user_id: oderId
+            socket.on("lobby_state", (data) => {
+                if (data && data.host_id !== undefined) window.hostId = data.host_id;
+                if (data) syncPlayers(data.players);
+            });
+            socket.on("friend_status_change", (data) => {
+                const status = document.getElementById(`friend-status-${data.user_id}`);
+                const label = document.getElementById(`friend-presence-${data.user_id}`);
+                const invite = document.querySelector(`[data-invite-id="${CSS.escape(String(data.user_id))}"]`);
+                if (status) {
+                    status.classList.toggle("online", Boolean(data.online));
+                    status.setAttribute("aria-label", data.online ? "متصل" : "غير متصل");
+                }
+                if (label) label.textContent = data.online ? "متصل الآن" : "غير متصل";
+                if (invite) invite.hidden = !data.online;
+            });
+            socket.on("player_joined", (data) => {
+                if (data) makePlayer({ id: data.user_id, username: data.username });
+            });
+            socket.on("player_left", (data) => { if (data) removePlayer(data); });
+            socket.on("you_were_kicked", () => {
+                notify("تم إخراجك من الغرفة.");
+                window.setTimeout(() => { window.location.href = "/dashboard"; }, 900);
+            });
+            socket.on("redirect_to_game", (data) => {
+                if (!data || data.lobby_id === undefined) return;
+                const params = new URLSearchParams({ timer: String(data.timer), letter: String(data.letter) });
+                window.location.href = `/game/${encodeURIComponent(data.lobby_id)}?${params.toString()}`;
+            });
+            socket.on("invite_sent", (data) => {
+                if (data && data.target_id !== undefined) {
+                    const button = document.querySelector(`[data-invite-id="${CSS.escape(String(data.target_id))}"]`);
+                    if (button) button.disabled = true;
+                }
+                notify("وصلت الدعوة لصاحبك.");
+            });
+            socket.on("invite_error", (data) => {
+                const message = typeof data === "string" ? data : (data && data.message) || "ما قدرناش نبعت الدعوة. جرّب تاني.";
+                if (data && data.target_id !== undefined) {
+                    const button = document.querySelector(`[data-invite-id="${CSS.escape(String(data.target_id))}"]`);
+                    if (button) button.disabled = false;
+                }
+                notify(message, true);
+            });
+            socket.on("lobby_error", (data) => {
+                notify((data && data.message) || "الغرفة غير متاحة الآن.", true);
+                const button = document.getElementById("startBtn");
+                if (button) {
+                    button.disabled = false;
+                    button.querySelector("span").textContent = "ابدأوا اللعب";
+                }
+            });
+            document.getElementById("friendsList")?.addEventListener("click", (event) => {
+                const button = event.target.closest("[data-invite-id]");
+                if (!button || button.disabled || !isHost) return;
+                button.disabled = true;
+                socket.emit("send_invite", {
+                    target_id: button.dataset.inviteId,
+                    lobby_id: lobbyId
                 });
-                removePlayerFromList(username);
-            }
-        }
-
-        function removePlayerFromList(username) {
-            const el = document.getElementById('player-' + username);
-            if (el) {
-                el.remove();
-                playerCount--;
-                document.getElementById('playersCount').textContent = playerCount;
-                players = players.filter(p => p !== username);
-            }
-        }
-
-        function addPlayerToList(username, oderId) {
-            if (players.includes(username)) return;
-            players.push(username);
-            playerCount++;
-            document.getElementById('playersCount').textContent = playerCount;
-
-            const list = document.getElementById('playersList');
-            const div = document.createElement('div');
-            div.className = 'player-item';
-            div.id = 'player-' + username;
-            
-            let kickBtn = '';
-            if (isHost) {
-                kickBtn = `<button class="kick-btn" onclick="kickPlayer('${username}', '${oderId}')"><i class="fas fa-times"></i> إزالة</button>`;
-            }
-            
-            div.innerHTML = `
-                <div class="player-avatar"><i class="fas fa-user" style="color: #a29bfe;"></i></div>
-                <span class="player-name">${username}</span>
-                <span class="player-badge" style="background: rgba(85,239,196,0.2); color: #55efc4;">مستعد</span>
-                ${kickBtn}
-            `;
-            list.appendChild(div);
-        }
-
-        socket.on('player_joined', function(data) {
-            console.log("Player joined:", data);
-            if (data.username !== myUsername) {
-                addPlayerToList(data.username, data.user_id || '');
-            }
-        });
-
-        socket.on('player_left', function(data) {
-            removePlayerFromList(data.username);
-        });
-
-        socket.on('you_were_kicked', function() {
-            alert("تم إزالتك من الغرفة بواسطة المضيف");
-            window.location.href = "/dashboard";
-        });
-
-        socket.on('receive_invite', function(data) {
-            console.log("Received invite:", data);
-        });
+            });
+            playersList.addEventListener("click", (event) => {
+                const button = event.target.closest("[data-kick-id]");
+                if (!button || !isHost || !window.confirm("هل تريد إزالة هذا اللاعب من الغرفة؟")) return;
+                socket.emit("kick_player", {
+                    lobby_id: lobbyId,
+                    user_id: button.dataset.kickId
+                });
+            });
+            document.getElementById("startBtn")?.addEventListener("click", (event) => {
+                const button = event.currentTarget;
+                if (button.disabled || !isHost) return;
+                button.disabled = true;
+                button.querySelector("span").textContent = "بنجهّز الجولة...";
+                socket.emit("start_game_event", {
+                    lobby_id: lobbyId,
+                    timer: document.getElementById("gameTimer").value
+                });
+            });
+        })();
     </script>
 </body>
 </html>

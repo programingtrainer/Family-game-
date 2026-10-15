@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>لوحة التحكم | Admin</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -60,5 +61,7 @@
         <br>
         <a href="/dashboard" class="back-link">العودة للرئيسية</a>
     </div>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='presence.js') }}"></script>
 </body>
 </html>

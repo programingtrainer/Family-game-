@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>الرسائل | FamilyGame</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -16,37 +17,33 @@
         <div class="inbox-list" style="margin-top: 20px;">
             {% if conversations %}
                 {% for chat in conversations %}
-                <a href="/chat/{{ chat.friend.id }}" style="text-decoration: none; display: block; margin-bottom: 10px;">
+                <a id="conversation-{{ chat.friend.id }}" data-friend-id="{{ chat.friend.id }}" href="/chat/{{ chat.friend.id }}" style="text-decoration: none; display: block; margin-bottom: 10px;">
                     <div class="chat-card" style="display: flex; align-items: center; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 15px; border: 1px solid rgba(255,255,255,0.03); transition: 0.3s;">
                         <div style="position: relative;">
                             <div style="width: 55px; height: 55px; background: #6c5ce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.2rem;">
                                 {{ chat.friend.username[0] | upper }}
                             </div>
-                            {% if chat.friend.is_online %}
-                            <span style="position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #2ed573; border: 2px solid #1a1a1a; border-radius: 50%;"></span>
-                            {% endif %}
+                            <span id="inbox-status-{{ chat.friend.id }}" class="inbox-status-dot" {% if not chat.friend.is_online %}hidden{% endif %} style="position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #2ed573; border: 2px solid #1a1a1a; border-radius: 50%;"></span>
                         </div>
 
                         <div style="margin-right: 15px; flex-grow: 1;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <h4 style="color: white; margin: 0; font-size: 1rem;">{{ chat.friend.username }}</h4>
-                                <span style="color: #a4b0be; font-size: 0.7rem;">{{ chat.time }}</span>
+                                <span class="conversation-time" style="color: #a4b0be; font-size: 0.7rem;">{{ chat.time }}</span>
                             </div>
-                            <p style="color: #ced6e0; font-size: 0.85rem; margin: 5px 0 0; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;">
+                            <p class="conversation-preview" style="color: #ced6e0; font-size: 0.85rem; margin: 5px 0 0; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;">
                                 {{ chat.last_message }}
                             </p>
                         </div>
 
-                        {% if chat.unread_count > 0 %}
-                        <div style="background: #ff4757; color: white; min-width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; padding: 2px;">
+                        <div class="conversation-unread" {% if chat.unread_count == 0 %}hidden{% endif %} style="background: #ff4757; color: white; min-width: 20px; height: 20px; border-radius: 50%; display: {% if chat.unread_count > 0 %}flex{% else %}none{% endif %}; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; padding: 2px;">
                             {{ chat.unread_count }}
                         </div>
-                        {% endif %}
                     </div>
                 </a>
                 {% endfor %}
             {% else %}
-                <div style="text-align: center; padding: 60px 20px; color: #a4b0be;">
+                <div id="empty-inbox" style="text-align: center; padding: 60px 20px; color: #a4b0be;">
                     <i class="fas fa-comment-slash" style="font-size: 4rem; margin-bottom: 20px; opacity: 0.2;"></i>
                     <h3 style="color: white; margin-bottom: 10px;">ليس هناك أي دردشة</h3>
                     <p style="font-size: 0.9rem; opacity: 0.6;">ابدأ الآن بالتواصل مع أصدقائك المقربين</p>
@@ -55,5 +52,78 @@
             {% endif %}
         </div>
     </div>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='presence.js') }}"></script>
+    <script>
+        (() => {
+            const socket = window.familyPresenceSocket || io();
+            const currentUserId = {{ session['user_id']|tojson }};
+
+            function createConversation(data) {
+                const row = document.createElement("a");
+                row.id = `conversation-${data.sender_id}`;
+                row.dataset.friendId = String(data.sender_id);
+                row.href = `/chat/${encodeURIComponent(data.sender_id)}`;
+                row.style.cssText = "text-decoration:none;display:block;margin-bottom:10px";
+                const card = document.createElement("div");
+                card.className = "chat-card";
+                card.style.cssText = "display:flex;align-items:center;padding:15px;background:rgba(255,255,255,.05);border-radius:15px;margin-bottom:10px";
+                const avatarWrap = document.createElement("div");
+                avatarWrap.style.position = "relative";
+                const avatar = document.createElement("div");
+                avatar.textContent = String(data.sender_name || "؟").slice(0, 1);
+                avatar.style.cssText = "width:55px;height:55px;background:#6c5ce7;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold";
+                const status = document.createElement("span");
+                status.id = `inbox-status-${data.sender_id}`;
+                status.className = "inbox-status-dot";
+                status.style.cssText = "position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:#2ed573;border:2px solid #1a1a1a;border-radius:50%";
+                avatarWrap.append(avatar, status);
+                const copy = document.createElement("div");
+                copy.style.cssText = "margin-right:15px;flex-grow:1;min-width:0";
+                const heading = document.createElement("div");
+                heading.style.cssText = "display:flex;justify-content:space-between;align-items:center";
+                const name = document.createElement("strong");
+                name.textContent = String(data.sender_name || "لاعب");
+                name.style.color = "white";
+                const time = document.createElement("span");
+                time.className = "conversation-time";
+                time.style.cssText = "color:#a4b0be;font-size:.7rem";
+                const preview = document.createElement("p");
+                preview.className = "conversation-preview";
+                preview.style.cssText = "color:#ced6e0;font-size:.85rem;margin:5px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+                const unread = document.createElement("span");
+                unread.className = "conversation-unread";
+                unread.style.cssText = "background:#ff4757;color:white;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:bold;padding:2px";
+                heading.append(name, time);
+                copy.append(heading, preview);
+                card.append(avatarWrap, copy, unread);
+                row.append(card);
+                document.querySelector(".inbox-list").prepend(row);
+                document.getElementById("empty-inbox")?.remove();
+                return row;
+            }
+
+            socket.on("receive_message", (data) => {
+                if (!data || Number(data.receiver_id) !== Number(currentUserId)) return;
+                let row = document.getElementById(`conversation-${data.sender_id}`);
+                if (!row) row = createConversation(data);
+                const preview = row.querySelector(".conversation-preview");
+                const time = row.querySelector(".conversation-time");
+                const unread = row.querySelector(".conversation-unread");
+                if (preview) preview.textContent = String(data.content || "");
+                if (time) time.textContent = String(data.timestamp || "");
+                if (unread) {
+                    unread.hidden = false;
+                    unread.style.display = "flex";
+                    unread.textContent = String((Number.parseInt(unread.textContent, 10) || 0) + 1);
+                }
+                row.parentElement.prepend(row);
+            });
+            socket.on("friend_status_change", (data) => {
+                const dot = document.getElementById(`inbox-status-${data.user_id}`);
+                if (dot) dot.hidden = !data.online;
+            });
+        })();
+    </script>
 </body>
 </html>

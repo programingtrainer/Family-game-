@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FamilyGame | قائمة الأوائل</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -14,7 +15,7 @@
                 <i class="fas fa-arrow-right"></i>
             </a>
             <div class="user-info">
-                <span>لوحة الشرف 🏆</span>
+                <span>لوحة الشرف</span>
             </div>
         </div>
 
@@ -34,11 +35,11 @@
                 <tr style="text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); {% if player.id == user.id %} background: rgba(108, 92, 231, 0.2); border: 1px solid #6c5ce7; {% endif %}">
                     <td style="padding: 15px;">
                         {% if loop.index == 1 %}
-                            <span style="font-size: 1.5rem;">🥇</span>
+                            <span class="rank-mark rank-gold"><i class="fas fa-crown" aria-hidden="true"></i></span>
                         {% elif loop.index == 2 %}
-                            <span style="font-size: 1.3rem;">🥈</span>
+                            <span class="rank-mark rank-silver"><i class="fas fa-award" aria-hidden="true"></i></span>
                         {% elif loop.index == 3 %}
-                            <span style="font-size: 1.1rem;">🥉</span>
+                            <span class="rank-mark rank-bronze"><i class="fas fa-award" aria-hidden="true"></i></span>
                         {% else %}
                             {{ loop.index }}
                         {% endif %}
@@ -66,5 +67,7 @@
             </a>
         </div>
     </div>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='presence.js') }}"></script>
 </body>
 </html>
