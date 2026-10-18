@@ -2,10 +2,16 @@ import os
 import random
 import threading
 import unicodedata
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+import hmac
+import json
+import secrets
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request as UrlRequest, urlopen
+from flask import Flask, abort, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, delete, select
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
 import uuid
@@ -18,6 +24,25 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET') or os.urandom(32)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///familygame_vFinal.db'
+app.config.update(
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+    SESSION_REFRESH_EACH_REQUEST=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=bool(
+        os.environ.get('REPLIT_DEV_DOMAIN')
+        or os.environ.get('REPLIT_DOMAINS')
+        or os.environ.get('REPLIT_DEPLOYMENT')
+    ),
+    SESSION_COOKIE_SAMESITE='Lax',
+    REMEMBER_COOKIE_DURATION=timedelta(days=7),
+    REMEMBER_COOKIE_HTTPONLY=True,
+    REMEMBER_COOKIE_SECURE=bool(
+        os.environ.get('REPLIT_DEV_DOMAIN')
+        or os.environ.get('REPLIT_DOMAINS')
+        or os.environ.get('REPLIT_DEPLOYMENT')
+    ),
+    REMEMBER_COOKIE_SAMESITE='Lax',
+)
 
 def _socket_allowed_origins():
     origins = {'http://localhost:5000', 'http://127.0.0.1:5000'}
@@ -49,12 +74,106 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login' # اسم الـ route بتاع صفحة الدخول عندك
 
+def get_csrf_token():
+    token = session.get('_csrf_token')
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session['_csrf_token'] = token
+    return token
+
+
+@app.context_processor
+def inject_security_template_values():
+    return {
+        'csrf_token': get_csrf_token,
+        'turnstile_site_key': os.environ.get('TURNSTILE_SITE_KEY', '')
+    }
+
+
+@app.before_request
+def protect_unsafe_requests():
+    if request.path.startswith('/socket.io/'):
+        return
+    if request.method not in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+        return
+
+    supplied_token = request.form.get('csrf_token') or request.headers.get('X-CSRFToken')
+    expected_token = session.get('_csrf_token')
+    if (
+        not isinstance(supplied_token, str)
+        or not isinstance(expected_token, str)
+        or not hmac.compare_digest(supplied_token, expected_token)
+    ):
+        abort(400, description='Invalid or missing CSRF token')
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+    if request.endpoint in {'login', 'signup'}:
+        response.headers['Cache-Control'] = 'no-store'
+    if (
+        request.is_secure
+        or os.environ.get('REPLIT_DEV_DOMAIN')
+        or os.environ.get('REPLIT_DOMAINS')
+        or os.environ.get('REPLIT_DEPLOYMENT')
+    ):
+        response.headers.setdefault(
+            'Strict-Transport-Security',
+            'max-age=31536000; includeSubDomains'
+        )
+    return response
+
+
+def verify_turnstile(token, expected_action):
+    secret_key = os.environ.get('TURNSTILE_SECRET_KEY')
+    if not secret_key or not os.environ.get('TURNSTILE_SITE_KEY'):
+        return False
+    if not isinstance(token, str) or not token or len(token) > 2048:
+        return False
+
+    payload = urlencode({
+        'secret': secret_key,
+        'response': token,
+        'idempotency_key': str(uuid.uuid4())
+    }).encode('ascii')
+    api_request = UrlRequest(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        data=payload,
+        headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        method='POST'
+    )
+    try:
+        with urlopen(api_request, timeout=8) as response:
+            result = json.loads(response.read(16384))
+    except (HTTPError, URLError, TimeoutError, OSError, ValueError):
+        app.logger.warning('Cloudflare Turnstile verification was unavailable')
+        return False
+
+    return (
+        isinstance(result, dict)
+        and result.get('success') is True
+        and result.get('action') == expected_action
+    )
+
+
+def start_authenticated_session(user):
+    session.clear()
+    login_user(user, remember=True, duration=timedelta(days=7))
+    session.permanent = True
+    session['user_id'] = user.id
+    session['username'] = user.username
+    session['_csrf_token'] = secrets.token_urlsafe(32)
+
+
 # --- تعريف الجداول ---
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     points = db.Column(db.Integer, default=0)
     is_blocked = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
@@ -126,7 +245,7 @@ def friends():
 
     return render_template('friends.html', results=search_results, my_friends=my_friends, user=user)
 
-@app.route('/add_friend/<int:friend_id>')
+@app.route('/add_friend/<int:friend_id>', methods=['POST'])
 def add_friend(friend_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
@@ -161,79 +280,86 @@ def add_friend(friend_id):
 
 @app.route('/')
 def welcome():
+    if current_user.is_authenticated:
+        return render_template('welcome.html', returning_user=current_user)
     return render_template('welcome.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    if request.method == 'POST':
-        user_name = request.form.get('username')
-        pass_word = request.form.get('password')
-        confirm_pwd = request.form.get('confirm_password')
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
 
+    if request.method == 'POST':
+        if not verify_turnstile(request.form.get('cf-turnstile-response'), 'signup'):
+            return render_template(
+                'signup.html',
+                error='تعذر التحقق من الحماية. حدّث التحدي وحاول مرة أخرى.'
+            ), 400
+
+        user_name = (request.form.get('username') or '').strip()
+        pass_word = request.form.get('password') or ''
+        confirm_pwd = request.form.get('confirm_password') or ''
+
+        if not 3 <= len(user_name) <= 80:
+            return render_template('signup.html', error='اسم المستخدم لازم يكون بين 3 و80 حرفاً'), 400
+        if not 12 <= len(pass_word) <= 128:
+            return render_template('signup.html', error='كلمة المرور لازم تكون بين 12 و128 حرفاً'), 400
         if pass_word != confirm_pwd:
-            return render_template('signup.html', error="كلمات السر غير متطابقة")
+            return render_template('signup.html', error='كلمتا المرور غير متطابقتين'), 400
 
         existing_user = User.query.filter_by(username=user_name).first()
         if existing_user:
-            return render_template('signup.html', error="الاسم موجود مسبقاً")
+            return render_template('signup.html', error='اسم المستخدم غير متاح'), 409
 
         hashed_password = generate_password_hash(pass_word)
         new_user = User(username=user_name, password=hashed_password)
         db.session.add(new_user)
-        db.session.commit()
-        return redirect(url_for('login'))
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception('Account creation failed')
+            return render_template('signup.html', error='تعذر إنشاء الحساب الآن. حاول مرة أخرى.'), 500
+
+        start_authenticated_session(new_user)
+        return redirect(url_for('dashboard'))
     return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+
     if request.method == 'POST':
-        user_name = request.form.get('username')
-        pass_word = request.form.get('password')
-        user_captcha = request.form.get('captcha_answer')
-        correct_captcha = session.get('captcha_result')
+        if not verify_turnstile(request.form.get('cf-turnstile-response'), 'login'):
+            return render_template(
+                'login.html',
+                error='تعذر التحقق من الحماية. حدّث التحدي وحاول مرة أخرى.'
+            ), 400
 
-        # 1. فحص الكاباتشا
-        if not user_captcha or int(user_captcha) != correct_captcha:
-            num1, num2 = random.randint(1, 10), random.randint(1, 10)
-            session['captcha_result'] = num1 + num2
-            return render_template('login.html', error="إجابة الكاباتشا غلط", num1=num1, num2=num2)
-
-        # 2. البحث عن المستخدم
+        user_name = (request.form.get('username') or '').strip()
+        pass_word = request.form.get('password') or ''
         user = User.query.filter_by(username=user_name).first()
 
-        if user:
-            password_valid = False
-            
-            # Check if password is hashed (starts with common hash prefixes)
+        password_valid = False
+        if user and pass_word:
             if user.password.startswith(('pbkdf2:', 'scrypt:', 'sha256$')):
-                password_valid = check_password_hash(user.password, pass_word)
-            else:
-                # Plain text password (old users) - check directly then upgrade
-                if user.password == pass_word:
-                    password_valid = True
-                    # Upgrade to hashed password
-                    user.password = generate_password_hash(pass_word)
-                    db.session.commit()
-            
-            if password_valid:
-                if user.is_blocked:
-                    num1, num2 = random.randint(1, 10), random.randint(1, 10)
-                    session['captcha_result'] = num1 + num2
-                    return render_template('login.html', error="حسابك محظور من الإدارة", num1=num1, num2=num2)
+                try:
+                    password_valid = check_password_hash(user.password, pass_word)
+                except (TypeError, ValueError):
+                    password_valid = False
+            elif hmac.compare_digest(user.password, pass_word):
+                password_valid = True
+                user.password = generate_password_hash(pass_word)
+                db.session.commit()
 
-                login_user(user, remember=True) 
-                session['user_id'] = user.id
-                session['username'] = user.username
-                return redirect(url_for('dashboard'))
+        if password_valid and user and not user.is_blocked:
+            start_authenticated_session(user)
+            return redirect(url_for('dashboard'))
 
-        num1, num2 = random.randint(1, 10), random.randint(1, 10)
-        session['captcha_result'] = num1 + num2
-        return render_template('login.html', error="اسم المستخدم أو كلمة المرور غلط", num1=num1, num2=num2)
+        return render_template('login.html', error='اسم المستخدم أو كلمة المرور غير صحيحة'), 401
 
-    # للجزء الـ GET
-    num1, num2 = random.randint(1, 10), random.randint(1, 10)
-    session['captcha_result'] = num1 + num2
-    return render_template('login.html', num1=num1, num2=num2)
+    return render_template('login.html')
 
 @app.route('/dashboard')
 def dashboard():
@@ -254,9 +380,10 @@ def dashboard():
 
     return render_template('dashboard.html', user=user, requests=pending_requests, notifications=notifications)
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 def logout():
     session.clear()
+    logout_user()
     return redirect(url_for('welcome'))
 
 # --- Routes الإعدادات ---
@@ -297,7 +424,7 @@ def admin_panel():
     users_count = User.query.filter(User.username != 'gatapro901').count()
     return render_template('admin.html', users=users_list, total_count=users_count, user=user)
 
-@app.route('/toggle_block/<int:user_id>')
+@app.route('/toggle_block/<int:user_id>', methods=['POST'])
 def toggle_block(user_id):
     admin = db.session.get(User, session.get('user_id'))
     if not admin or admin.username != 'gatapro901':
@@ -309,46 +436,52 @@ def toggle_block(user_id):
     return redirect(url_for('admin_panel'))
 
 # دالة حذف المستخدم من لوحة التحكم (للأدمن)
-@app.route('/admin_delete_user/<int:user_id>')
+@app.route('/admin_delete_user/<int:user_id>', methods=['POST'])
 def admin_delete_user(user_id):
-    # نستخدم get_or_404 لضمان وجود المستخدم
+    admin = db.session.get(User, session.get('user_id'))
+    if not admin or admin.username != 'gatapro901':
+        return 'Unauthorized', 403
+    if user_id == admin.id:
+        flash('لا يمكن حذف حساب الإدارة من هذه الصفحة')
+        return redirect(url_for('admin_panel'))
+
     user = User.query.get_or_404(user_id)
 
     try:
-        # 1. حذف كافة رسائل المستخدم أولاً
         Message.query.filter((Message.sender_id == user_id) | (Message.receiver_id == user_id)).delete()
-
-        # 2. الآن نحذف المستخدم نفسه
+        Friend.query.filter((Friend.user_id == user_id) | (Friend.friend_id == user_id)).delete()
+        Notification.query.filter_by(user_id=user_id).delete()
         db.session.delete(user)
         db.session.commit()
-        # رجعنا لاسم الدالة 'dashboard' زي ما الـ Debugger اقترح
         return redirect(url_for('admin_panel'))
 
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        # لازم السطر ده كمان يكون جوه الـ except بمحاذاة الـ rollback
-        return f"حدث خطأ: {e}"
+        app.logger.exception('Admin user deletion failed')
+        flash('تعذر حذف المستخدم الآن')
+        return redirect(url_for('admin_panel'))
 
 # دالة حذف الحساب (للمستخدم نفسه من الإعدادات)
-@app.route('/delete_account')
+@app.route('/delete_account', methods=['POST'])
 @login_required
 def delete_account():
     user_id = current_user.id
     user = User.query.get(user_id)
 
     try:
-        # 1. تنظيف الرسائل
         Message.query.filter((Message.sender_id == user_id) | (Message.receiver_id == user_id)).delete()
-
-        # 2. حذف الحساب
+        Friend.query.filter((Friend.user_id == user_id) | (Friend.friend_id == user_id)).delete()
+        Notification.query.filter_by(user_id=user_id).delete()
         db.session.delete(user)
         db.session.commit()
 
+        session.clear()
         logout_user()
         return redirect(url_for('welcome'))
     except Exception as e:
         db.session.rollback()
-        return f"حدث خطأ: {e}"
+        app.logger.exception('Account deletion failed')
+        return 'تعذر حذف الحساب الآن', 500
 
 @app.route('/leaderboard')
 def leaderboard():
@@ -364,7 +497,7 @@ def leaderboard():
 
     return render_template('leaderboard.html', players=top_players, user=current_user)
 
-@app.route('/accept_friend/<int:request_id>')
+@app.route('/accept_friend/<int:request_id>', methods=['POST'])
 def accept_friend(request_id):
     if 'user_id' not in session: return redirect(url_for('login'))
 
@@ -394,7 +527,7 @@ def accept_friend(request_id):
 
     return redirect(url_for('dashboard'))
 
-@app.route('/reject_friend/<int:request_id>')
+@app.route('/reject_friend/<int:request_id>', methods=['POST'])
 def reject_friend(request_id):
     if 'user_id' not in session: return redirect(url_for('login'))
 
@@ -404,7 +537,7 @@ def reject_friend(request_id):
         db.session.commit()
     return redirect(url_for('dashboard'))
 
-@app.route('/unfriend/<int:friend_id>')
+@app.route('/unfriend/<int:friend_id>', methods=['POST'])
 def unfriend(friend_id):
     if 'user_id' not in session: return redirect(url_for('login'))
     u_id = session['user_id']
@@ -516,29 +649,35 @@ def handle_send_message(data):
     socketio.emit('receive_message', msg_data, room=f"user_{sender_id}")
 
 # 1. حذف رسالة معينة
-@app.route('/delete_message/<int:message_id>')
+@app.route('/delete_message/<int:message_id>', methods=['POST'])
 def delete_message(message_id):
     if 'user_id' not in session: return redirect('/login')
     msg = db.session.get(Message, message_id)
-    # التأكد إن اللي بيحذف هو اللي بعت الرسالة
     if msg and msg.sender_id == session['user_id']:
+        friend_id = msg.receiver_id
         db.session.delete(msg)
         db.session.commit()
-    return redirect(request.referrer)
+        return redirect(url_for('chat', friend_id=friend_id))
+    return 'Message not found or not owned by the current user', 404
 
 # 2. تعديل رسالة (سنستخدم POST لاستقبال النص الجديد)
 @app.route('/edit_message/<int:message_id>', methods=['POST'])
 def edit_message(message_id):
     if 'user_id' not in session: return redirect('/login')
     msg = db.session.get(Message, message_id)
-    new_content = request.form.get('content')
-    if msg and msg.sender_id == session['user_id'] and new_content:
-        msg.content = new_content + " (معدلة)" # إضافة كلمة معدلة للشفافية
+    new_content = (request.form.get('content') or '').strip()
+    if not msg or msg.sender_id != session['user_id']:
+        return 'Message not found or not owned by the current user', 404
+    if not new_content or len(new_content) > 500:
+        return 'Invalid message content', 400
+    if msg and msg.sender_id == session['user_id']:
+        friend_id = msg.receiver_id
+        msg.content = new_content + ' (معدلة)'
         db.session.commit()
-    return redirect(request.referrer)
+    return '', 204
 
 # 3. حذف الشات بالكامل بين شخصين
-@app.route('/delete_chat/<int:friend_id>')
+@app.route('/delete_chat/<int:friend_id>', methods=['POST'])
 def delete_chat(friend_id):
     if 'user_id' not in session: return redirect('/login')
     user_id = session['user_id']
@@ -953,7 +1092,7 @@ def lobby(lobby_id):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-@app.route('/start_new_game')
+@app.route('/start_new_game', methods=['POST'])
 @login_required
 def start_new_game():
     new_lobby_id = str(uuid.uuid4())[:8]
@@ -961,7 +1100,7 @@ def start_new_game():
     return redirect(url_for('lobby', lobby_id=new_lobby_id))
 
 
-@app.route('/challenge/<int:friend_id>')
+@app.route('/challenge/<int:friend_id>', methods=['POST'])
 @login_required
 def challenge_friend(friend_id):
     friend_link = Friend.query.filter_by(
@@ -985,7 +1124,7 @@ def challenge_friend(friend_id):
     }, room=f"user_{friend_id}")
     return redirect(url_for('lobby', lobby_id=lobby_id))
 
-@app.route('/join_lobby/<lobby_id>')
+@app.route('/join_lobby/<lobby_id>', methods=['POST'])
 @login_required
 def join_lobby(lobby_id):
     with state_lock:

@@ -1,27 +1,71 @@
 <!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FamilyGame | أهلاً بك</title>
-
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#6c5ce7"> <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#493447">
+    <title>FamilyGame | {{ 'أهلاً بعودتك' if returning_user else 'اللعب أحلى مع العيلة' }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="auth-page">
+    <main class="auth-shell welcome-shell">
+        <aside class="auth-story">
+            <a class="auth-brand" href="/" aria-label="FamilyGame الرئيسية">
+                <span class="brand-mark"><i class="fa-solid fa-dice" aria-hidden="true"></i></span>
+                <span>FamilyGame</span>
+            </a>
+            <div class="auth-story-copy">
+                <span class="auth-eyebrow">اللعب أحلى لما نلعب سوا</span>
+                <h1>لمة العيلة<br>تبدأ بجولة.</h1>
+                <p>اختاروا حرفاً، جهّزوا إجاباتكم، وشوفوا مين الأسرع في التحدي.</p>
+            </div>
+            <div class="letter-board" aria-hidden="true">
+                <span>ع</span><span>ا</span><span>ئ</span><span>ل</span>
+            </div>
+            <div class="auth-story-footer">
+                <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> العبوا مع الأصدقاء والعيلة</span>
+                <span><i class="fa-solid fa-star" aria-hidden="true"></i> كل جولة فرصة للصدارة</span>
+            </div>
+        </aside>
 
-    <div class="welcome-container">
-        <h1 class="logo">FamilyGame</h1>
-        <p class="slogan">اجمع عائلتك، ابدأ التحدي، وكن الأسرع!</p>
-
-        <div class="btn-group">
-            <a href="/login" class="btn btn-login">تسجيل دخول اللاعبين </a>
-            <a href="/signup" class="btn btn-signup">  إنشاء حساب جديد </a>
-        </div>
-    </div>
-
+        <section class="auth-card welcome-card">
+            <div class="auth-mobile-brand">
+                <span class="brand-mark"><i class="fa-solid fa-dice" aria-hidden="true"></i></span>
+                <span>FamilyGame</span>
+            </div>
+            {% if returning_user %}
+                <span class="auth-eyebrow"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> نورت اللعبة تاني</span>
+                <h2>أهلاً بعودتك، {{ returning_user.username }}</h2>
+                <p class="auth-subtitle">أصحابك والجولة الجاية مستنيينك. جاهز ترجع للمنافسة؟</p>
+                <a href="{{ url_for('dashboard') }}" class="auth-submit welcome-dashboard">
+                    الذهاب إلى لوحة اللعب <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </a>
+                <form action="{{ url_for('logout') }}" method="POST" class="welcome-logout-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="auth-back-link">تسجيل الخروج</button>
+                </form>
+            {% else %}
+                <span class="auth-eyebrow">أهلًا بيكم في FamilyGame</span>
+                <h2>مين فيكم هيكسب الجولة؟</h2>
+                <p class="auth-subtitle">لعبة عائلية سريعة تجمع التفكير والضحك والمنافسة اللطيفة.</p>
+                <div class="welcome-actions">
+                    <a href="{{ url_for('signup') }}" class="auth-submit">
+                        أنشئ حساباً وابدأ <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                    </a>
+                    <a href="{{ url_for('login') }}" class="auth-secondary">
+                        عندك حساب؟ سجّل دخولك
+                    </a>
+                </div>
+                <div class="welcome-feature-row">
+                    <span><i class="fa-solid fa-bolt" aria-hidden="true"></i> جولات سريعة</span>
+                    <span><i class="fa-solid fa-users" aria-hidden="true"></i> منافسة جماعية</span>
+                </div>
+            {% endif %}
+        </section>
+    </main>
 </body>
 </html>

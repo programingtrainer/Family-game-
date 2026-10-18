@@ -313,8 +313,14 @@
                             <div class="notif-item">
                                 <p><i class="fas fa-user-plus" style="color: #a29bfe;"></i> <b>{{ req.username }}</b> يريد إضافتك كصديق</p>
                                 <div class="notif-actions">
-                                    <a href="/accept_friend/{{ req.id }}" class="btn-accept">قبول</a>
-                                    <a href="/reject_friend/{{ req.id }}" class="btn-reject">رفض</a>
+                                    <form action="/accept_friend/{{ req.id }}" method="POST">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn-accept">قبول</button>
+                                    </form>
+                                    <form action="/reject_friend/{{ req.id }}" method="POST">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn-reject">رفض</button>
+                                    </form>
                                 </div>
                             </div>
                             {% endfor %}
@@ -332,9 +338,12 @@
                         </div>
                     </div>
                 </div>
-                <a href="/logout" class="icon-btn" title="تسجيل الخروج">
-                    <i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i>
-                </a>
+                <form action="{{ url_for('logout') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="icon-btn" title="تسجيل الخروج">
+                        <i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i>
+                    </button>
+                </form>
             </div>
         </div>
 
@@ -343,10 +352,13 @@
             <p class="tagline">اجمع عائلتك وابدأ التحدي!</p>
         </div>
 
-        <a href="{{ url_for('start_new_game') }}" class="play-btn">
-            <i class="fas fa-play-circle"></i>
-            <span>العب الآن!</span>
-        </a>
+        <form action="{{ url_for('start_new_game') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="play-btn" style="border:0;font:inherit;cursor:pointer;">
+                <i class="fas fa-play-circle"></i>
+                <span>العب الآن!</span>
+            </button>
+        </form>
 
         <div class="action-grid">
             <a href="/friends" class="action-card friends">
@@ -386,6 +398,7 @@
         const mainBadge = document.getElementById('mainBadge');
         const msgBadge = document.getElementById('unreadMessagesBadge');
         const currentUserId = {{ user.id|tojson }};
+        const csrfToken = {{ csrf_token()|tojson }};
 
         socket.on('receive_invite', function(data) {
             updateMainBadge(1);
@@ -433,11 +446,19 @@
             const actions = document.createElement('div');
             actions.className = 'notif-actions';
             if (type === 'invite' || type === 'friend') {
-                const accept = document.createElement('a');
+                const acceptForm = document.createElement('form');
+                acceptForm.method = 'POST';
+                acceptForm.action = type === 'invite' ? `/join_lobby/${encodeURIComponent(id)}` : `/accept_friend/${encodeURIComponent(id)}`;
+                const csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = 'csrf_token';
+                csrf.value = csrfToken;
+                const accept = document.createElement('button');
+                accept.type = 'submit';
                 accept.className = 'btn-accept';
-                accept.href = type === 'invite' ? `/join_lobby/${encodeURIComponent(id)}` : `/accept_friend/${encodeURIComponent(id)}`;
                 accept.textContent = type === 'invite' ? 'انضمام' : 'قبول';
-                actions.appendChild(accept);
+                acceptForm.append(csrf, accept);
+                actions.appendChild(acceptForm);
             }
             if (type === 'invite') {
                 const dismiss = document.createElement('button');
@@ -446,11 +467,19 @@
                 dismiss.addEventListener('click', () => removeNotif(dismiss));
                 actions.appendChild(dismiss);
             } else if (type === 'friend') {
-                const reject = document.createElement('a');
+                const rejectForm = document.createElement('form');
+                rejectForm.method = 'POST';
+                rejectForm.action = `/reject_friend/${encodeURIComponent(id)}`;
+                const csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = 'csrf_token';
+                csrf.value = csrfToken;
+                const reject = document.createElement('button');
+                reject.type = 'submit';
                 reject.className = 'btn-reject';
-                reject.href = `/reject_friend/${encodeURIComponent(id)}`;
                 reject.textContent = 'رفض';
-                actions.appendChild(reject);
+                rejectForm.append(csrf, reject);
+                actions.appendChild(rejectForm);
             }
             item.append(text, actions);
             body.prepend(item);

@@ -1,67 +1,100 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#493447">
     <title>FamilyGame | تسجيل الدخول</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
-<body>
+<body class="auth-page">
+    <main class="auth-shell">
+        <aside class="auth-story" aria-label="عن FamilyGame">
+            <a class="auth-brand" href="/" aria-label="FamilyGame الرئيسية">
+                <span class="brand-mark"><i class="fa-solid fa-dice" aria-hidden="true"></i></span>
+                <span>FamilyGame</span>
+            </a>
+            <div class="auth-story-copy">
+                <span class="auth-eyebrow">وقت العيلة أحلى باللعب</span>
+                <h1>جاهز لجولة<br>تجمع الكل؟</h1>
+                <p>فكّر بسرعة، جاوب بحرف الجولة، ونافس عيلتك على الصدارة.</p>
+            </div>
+            <div class="letter-board" aria-hidden="true">
+                <span>س</span><span>ع</span><span>م</span><span>ن</span>
+            </div>
+            <div class="auth-story-footer">
+                <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> تحديات عائلية مباشرة</span>
+                <span><i class="fa-solid fa-trophy" aria-hidden="true"></i> نقاط وترتيب يتحدثان</span>
+            </div>
+        </aside>
 
-    <div class="welcome-container animate-in">
-        <h2 class="logo" style="font-size: 2.5rem;">دخول اللاعبين</h2>
-
-        <form action="/login" method="POST" class="auth-form">
+        <section class="auth-card">
+            <div class="auth-mobile-brand">
+                <span class="brand-mark"><i class="fa-solid fa-dice" aria-hidden="true"></i></span>
+                <span>FamilyGame</span>
+            </div>
+            <span class="auth-eyebrow">أهلاً بعودتك</span>
+            <h2>سجّل دخولك</h2>
+            <p class="auth-subtitle">كمّل اللعب من آخر تحدٍ مع أصحابك.</p>
 
             {% if error %}
-            <p style="color: #ff7675; font-size: 0.9rem; background: rgba(255,118,117,0.1); padding: 10px; border-radius: 10px; border: 1px solid #ff7675;">
-                <i class="fas fa-exclamation-circle"></i> {{ error }}
-            </p>
+            <div class="auth-alert" role="alert">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                <span>{{ error }}</span>
+            </div>
             {% endif %}
 
-            <div class="input-group">
-                <i class="fas fa-user icon"></i>
-                <input type="text" name="username" placeholder="اسم المستخدم" autocomplete="username" required>
-            </div>
+            <form action="{{ url_for('login') }}" method="POST" class="auth-form auth-form-polished">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label class="auth-field">
+                    <span>اسم المستخدم</span>
+                    <span class="auth-input-wrap">
+                        <i class="fa-regular fa-user" aria-hidden="true"></i>
+                        <input type="text" name="username" placeholder="اكتب اسم المستخدم" autocomplete="username" maxlength="80" required>
+                    </span>
+                </label>
 
-            <div class="input-group">
-                <i class="fas fa-lock icon"></i>
-                <input type="password" id="password" name="password" placeholder="كلمة السر" autocomplete="current-password" required>
-                <i class="fas fa-eye-slash toggle-password" id="togglePassword"></i>
-            </div>
+                <label class="auth-field">
+                    <span>كلمة المرور</span>
+                    <span class="auth-input-wrap">
+                        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                        <input type="password" id="password" name="password" placeholder="اكتب كلمة المرور" autocomplete="current-password" maxlength="128" required>
+                        <button class="password-toggle" type="button" id="togglePassword" aria-label="إظهار كلمة المرور">
+                            <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+                        </button>
+                    </span>
+                </label>
 
-            <div class="captcha-box">
-                <label>أثبت أنك لست روبوت: ما هو {{ num1 }} + {{ num2 }}؟</label>
-                <input type="number" 
-                       name="captcha_answer" 
-                       placeholder="اكتب الإجابة هنا" 
-                       required 
-                       autocomplete="off"
-                       inputmode="numeric" 
-                       pattern="[0-9]*" 
-                       style="width: 100%; padding: 10px; margin-bottom: 10px; text-align: center;">
-            </div>
+                {% if turnstile_site_key %}
+                <div class="auth-verification">
+                    <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-action="login" data-theme="light"></div>
+                </div>
+                {% else %}
+                <p class="auth-alert" role="alert">التحقق الأمني غير متاح الآن. حاول مرة أخرى لاحقاً.</p>
+                {% endif %}
 
-            <button type="submit" class="btn btn-login" style="width: 100%; border: none;">دخول</button>
-        </form>
+                <button type="submit" class="auth-submit" {% if not turnstile_site_key %}disabled{% endif %}>
+                    دخول إلى اللعبة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </button>
+            </form>
 
-        <div style="margin-top: 20px;">
-            <p>ليس لديك حساب؟ <a href="/signup" style="color: var(--accent-color); text-decoration: none; font-weight: bold;">سجل الآن</a></p>
-        </div>
-    </div>
-
+            <p class="auth-switch">أول مرة تلعب؟ <a href="{{ url_for('signup') }}">أنشئ حسابك مجاناً</a></p>
+            <a class="auth-back-link" href="{{ url_for('welcome') }}">العودة للصفحة الرئيسية</a>
+        </section>
+    </main>
     <script>
-        // كود زر العين
-        const togglePassword = document.querySelector('#togglePassword');
-        const password = document.querySelector('#password');
-
-        togglePassword.addEventListener('click', function () {
-            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-            password.setAttribute('type', type);
-            this.classList.toggle('fa-eye');
-            this.classList.toggle('fa-eye-slash');
+        const togglePassword = document.getElementById("togglePassword");
+        const password = document.getElementById("password");
+        togglePassword?.addEventListener("click", () => {
+            const visible = password.type === "password";
+            password.type = visible ? "text" : "password";
+            togglePassword.setAttribute("aria-label", visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور");
+            togglePassword.querySelector("i").classList.toggle("fa-eye");
+            togglePassword.querySelector("i").classList.toggle("fa-eye-slash");
         });
     </script>
 </body>

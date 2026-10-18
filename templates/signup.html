@@ -1,64 +1,124 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#493447">
     <title>FamilyGame | حساب جديد</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
-<body>
-
-    <div class="welcome-container animate-in">
-        <h2 class="logo">حساب جديد</h2>
-        <p>سجل بياناتك وانضم لعائلة اللعبة</p>
-
-        <form action="/signup" method="POST" class="auth-form" id="signupForm">
-            <div class="input-group">
-                <i class="fas fa-user icon"></i>
-                <input type="text" name="username" placeholder="اسم المستخدم" required>
+<body class="auth-page">
+    <main class="auth-shell">
+        <aside class="auth-story auth-story-signup" aria-label="انضم إلى FamilyGame">
+            <a class="auth-brand" href="/" aria-label="FamilyGame الرئيسية">
+                <span class="brand-mark"><i class="fa-solid fa-dice" aria-hidden="true"></i></span>
+                <span>FamilyGame</span>
+            </a>
+            <div class="auth-story-copy">
+                <span class="auth-eyebrow">كل جولة لها حكاية</span>
+                <h1>اجمع عيلتك<br>وابدأ التحدي.</h1>
+                <p>أنشئ حساباً، ادعُ أصحابك، وخلي أسرع إجابة تكسب الجولة.</p>
             </div>
-
-            <div class="input-group">
-                <i class="fas fa-lock icon"></i>
-                <input type="password" id="password" name="password" placeholder="كلمة السر" required>
-                <i class="fas fa-eye-slash toggle-password" onclick="togglePass('password', this)"></i>
+            <div class="letter-board" aria-hidden="true">
+                <span>ف</span><span>ر</span><span>ح</span><span>ة</span>
             </div>
-
-            <div class="input-group">
-                <i class="fas fa-check-double icon"></i>
-                <input type="password" id="confirm_password" name="confirm_password" placeholder="تأكيد كلمة السر" required>
-                <i class="fas fa-eye-slash toggle-password" onclick="togglePass('confirm_password', this)"></i>
+            <div class="auth-story-footer">
+                <span><i class="fa-solid fa-bolt" aria-hidden="true"></i> جولات قصيرة وممتعة</span>
+                <span><i class="fa-solid fa-shield-heart" aria-hidden="true"></i> حسابك محمي</span>
             </div>
+        </aside>
 
-            <button type="submit" class="btn btn-login" style="width: 100%; border: none;">إنشاء الحساب</button>
-        </form>
+        <section class="auth-card">
+            <div class="auth-mobile-brand">
+                <span class="brand-mark"><i class="fa-solid fa-dice" aria-hidden="true"></i></span>
+                <span>FamilyGame</span>
+            </div>
+            <span class="auth-eyebrow">انضم للمنافسة</span>
+            <h2>أنشئ حسابك</h2>
+            <p class="auth-subtitle">خطوة واحدة وتبدأ أول جولة مع عيلتك.</p>
 
-        <a href="/" class="logout-link" style="display: block; margin-top: 15px;">العودة للرئيسية</a>
-    </div>
+            {% if error %}
+            <div class="auth-alert" role="alert">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
 
+            <form action="{{ url_for('signup') }}" method="POST" class="auth-form auth-form-polished" id="signupForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label class="auth-field">
+                    <span>اسم المستخدم</span>
+                    <span class="auth-input-wrap">
+                        <i class="fa-regular fa-user" aria-hidden="true"></i>
+                        <input type="text" name="username" placeholder="اختار اسماً يظهر لأصحابك" autocomplete="username" minlength="3" maxlength="80" required>
+                    </span>
+                </label>
+
+                <label class="auth-field">
+                    <span>كلمة المرور <small>12 حرفاً على الأقل</small></span>
+                    <span class="auth-input-wrap">
+                        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                        <input type="password" id="password" name="password" placeholder="أنشئ كلمة مرور قوية" autocomplete="new-password" minlength="12" maxlength="128" required>
+                        <button class="password-toggle" type="button" data-toggle="password" aria-label="إظهار كلمة المرور">
+                            <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+                        </button>
+                    </span>
+                </label>
+
+                <label class="auth-field">
+                    <span>تأكيد كلمة المرور</span>
+                    <span class="auth-input-wrap">
+                        <i class="fa-solid fa-check" aria-hidden="true"></i>
+                        <input type="password" id="confirm_password" name="confirm_password" placeholder="اكتبها مرة ثانية" autocomplete="new-password" minlength="12" maxlength="128" required>
+                        <button class="password-toggle" type="button" data-toggle="confirm_password" aria-label="إظهار تأكيد كلمة المرور">
+                            <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+                        </button>
+                    </span>
+                </label>
+
+                {% if turnstile_site_key %}
+                <div class="auth-verification">
+                    <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-action="signup" data-theme="light"></div>
+                </div>
+                {% else %}
+                <p class="auth-alert" role="alert">التحقق الأمني غير متاح الآن. حاول مرة أخرى لاحقاً.</p>
+                {% endif %}
+
+                <button type="submit" class="auth-submit" {% if not turnstile_site_key %}disabled{% endif %}>
+                    إنشاء الحساب والبدء <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </button>
+            </form>
+
+            <p class="auth-switch">عندك حساب بالفعل؟ <a href="{{ url_for('login') }}">سجّل دخولك</a></p>
+            <a class="auth-back-link" href="{{ url_for('welcome') }}">العودة للصفحة الرئيسية</a>
+        </section>
+    </main>
     <script>
-        // دالة موحدة لتشغيل العين لأي خانة
-        function togglePass(id, el) {
-            const input = document.getElementById(id);
-            if (input.type === "password") {
-                input.type = "text";
-                el.classList.replace('fa-eye-slash', 'fa-eye');
+        document.querySelectorAll("[data-toggle]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const input = document.getElementById(button.dataset.toggle);
+                const visible = input.type === "password";
+                input.type = visible ? "text" : "password";
+                button.setAttribute("aria-label", visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور");
+                button.querySelector("i").classList.toggle("fa-eye");
+                button.querySelector("i").classList.toggle("fa-eye-slash");
+            });
+        });
+        document.getElementById("signupForm")?.addEventListener("submit", (event) => {
+            const password = document.getElementById("password").value;
+            const confirm = document.getElementById("confirm_password").value;
+            if (password !== confirm) {
+                event.preventDefault();
+                document.getElementById("confirm_password").setCustomValidity("كلمتا المرور غير متطابقتين");
+                document.getElementById("confirm_password").reportValidity();
             } else {
-                input.type = "password";
-                el.classList.replace('fa-eye', 'fa-eye-slash');
+                document.getElementById("confirm_password").setCustomValidity("");
             }
-        }
-
-        // منع الإرسال لو الباسورد مش متطابق (حماية إضافية في المتصفح)
-        document.getElementById('signupForm').onsubmit = function() {
-            if (document.getElementById('password').value !== document.getElementById('confirm_password').value) {
-                alert("كلمات السر غير متطابقة!");
-                return false;
-            }
-            return true;
-        };
+        });
     </script>
 </body>
 </html>
