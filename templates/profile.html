@@ -48,16 +48,22 @@
                 <i class="fas fa-paper-plane" style="margin-left: 8px;"></i> مراسلة
             </a>
 
-            <a href="/unfriend/{{ target.id }}" class="btn" style="background: rgba(255, 71, 87, 0.1); color: #ff4757; width: 100%; border: 1px solid #ff4757; text-decoration: none; padding: 10px; display: block; border-radius: 10px; font-size: 0.9rem;" onclick="return confirm('هل أنت متأكد من حذف الصديق؟')">
-                <i class="fas fa-user-minus"></i> حذف من الأصدقاء
-            </a>
+            <form action="/unfriend/{{ target.id }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف الصديق؟')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn" style="background: rgba(255, 71, 87, 0.1); color: #ff4757; width: 100%; border: 1px solid #ff4757; padding: 10px; border-radius: 10px; font-size: 0.9rem; cursor: pointer;">
+                    <i class="fas fa-user-minus"></i> حذف من الأصدقاء
+                </button>
+            </form>
 
             {% else %}
             <div style="background: rgba(255, 118, 117, 0.1); padding: 20px; border-radius: 15px; border: 1px dashed #ff7675;">
                 <p style="color: #ff7675; margin-bottom: 15px;">
                     يجب أن تكون صديقاً لـ <strong>{{ target.username }}</strong> لرؤية إحصائياته.
                 </p>
-                <a href="/add_friend/{{ target.id }}" class="btn" style="background: #2ed573; color: white; text-decoration: none; padding: 8px 20px; border-radius: 8px;">إرسال طلب صداقة</a>
+                <form action="/add_friend/{{ target.id }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn" style="background: #2ed573; color: white; border: 0; padding: 8px 20px; border-radius: 8px; cursor: pointer;">إرسال طلب صداقة</button>
+                </form>
             </div>
             {% endif %}
         </div>

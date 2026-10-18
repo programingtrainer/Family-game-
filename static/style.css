@@ -131,31 +131,6 @@ input-group .toggle-password {
 .toggle-password:hover {
     color: var(--primary-color);
 }
-/* تنسيق صندوق الكاباتشا */
-.captcha-box {
-    background: rgba(255, 255, 255, 0.15); /* خلفية شفافة بسيطة */
-    border: 1px dashed rgba(255, 255, 255, 0.3);
-    padding: 15px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.captcha-box label {
-    font-size: 0.9rem;
-    margin-bottom: 10px;
-    display: block;
-    color: var(--accent-color); /* لون برتقالي فاتح عشان يشد الانتباه */
-    font-weight: bold;
-}
-
-.captcha-box input {
-    width: 60% !important; /* تصغير خانة الإجابة شوية */
-    text-align: center;
-    padding: 8px !important;
-    border-radius: 8px !important;
-}
-
 /* تحسين شكل النصوص الروابط أسفل الفورم */
 .auth-footer {
     margin-top: 25px;
@@ -826,12 +801,6 @@ a { transition: color .18s ease, background-color .18s ease, border-color .18s e
 .input-group .icon { color: var(--fg-plum) !important; }
 .toggle-password { color: var(--fg-muted) !important; }
 .toggle-password:hover { color: var(--fg-coral) !important; }
-.captcha-box {
-    color: var(--fg-ink) !important;
-    background: #f8f3eb !important;
-    border-color: #dccbbb !important;
-}
-.captcha-box label { color: var(--fg-plum) !important; }
 .auth-footer,
 .auth-footer p { color: var(--fg-muted) !important; }
 .auth-footer a,

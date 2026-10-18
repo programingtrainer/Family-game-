@@ -11,6 +11,7 @@ from urllib.request import Request as UrlRequest, urlopen
 from flask import Flask, abort, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, delete, select
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
@@ -221,6 +222,23 @@ class Message(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id], back_populates='sent_messages')
     receiver = db.relationship('User', foreign_keys=[receiver_id], back_populates='received_messages')
 
+
+def are_accepted_friends(user_id, friend_id):
+    return Friend.query.filter(
+        Friend.status == 'accepted',
+        or_(
+            (Friend.user_id == user_id) & (Friend.friend_id == friend_id),
+            (Friend.user_id == friend_id) & (Friend.friend_id == user_id)
+        )
+    ).first() is not None
+
+
+def active_socket_user():
+    user_id = session.get('user_id')
+    user = db.session.get(User, user_id) if user_id else None
+    return user if user and not user.is_blocked else None
+
+
 with app.app_context():
     db.create_all()
     User.query.update({User.is_online_status: False})
@@ -316,6 +334,9 @@ def signup():
         db.session.add(new_user)
         try:
             db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return render_template('signup.html', error='اسم المستخدم غير متاح'), 409
         except Exception:
             db.session.rollback()
             app.logger.exception('Account creation failed')
@@ -400,15 +421,35 @@ def change_password():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = db.session.get(User, session['user_id'])
+    current_pwd = request.form.get('current_password') or ''
     new_pwd = request.form.get('new_password')
     confirm_pwd = request.form.get('confirm_password')
 
+    if not user:
+        session.clear()
+        logout_user()
+        return redirect(url_for('login'))
+    if not current_pwd:
+        return render_template('settings.html', error='اكتب كلمة المرور الحالية', user=user), 400
+    try:
+        current_valid = (
+            check_password_hash(user.password, current_pwd)
+            if user.password.startswith(('pbkdf2:', 'scrypt:', 'sha256$'))
+            else hmac.compare_digest(user.password, current_pwd)
+        )
+    except (TypeError, ValueError):
+        current_valid = False
+    if not current_valid:
+        return render_template('settings.html', error='كلمة المرور الحالية غير صحيحة', user=user), 400
+    if not new_pwd or not 12 <= len(new_pwd) <= 128:
+        return render_template('settings.html', error='كلمة المرور الجديدة لازم تكون بين 12 و128 حرفاً', user=user), 400
     if new_pwd != confirm_pwd:
-        return render_template('settings.html', error="غير متطابقة", user=user)
+        return render_template('settings.html', error='كلمتا المرور غير متطابقتين', user=user), 400
 
     user.password = generate_password_hash(new_pwd)
     db.session.commit()
-    return render_template('settings.html', success="تم التغيير ✅", user=user)
+    start_authenticated_session(user)
+    return render_template('settings.html', success='تم تحديث كلمة المرور', user=user)
 
 # --- لوحة التحكم (gatapro901) ---
 
@@ -563,11 +604,23 @@ def profile(user_id):
 
 @app.before_request
 def update_last_seen():
-    if current_user.is_authenticated and request.endpoint != 'static':
-        now = datetime.utcnow()
-        if not current_user.last_seen or (now - current_user.last_seen).total_seconds() >= 30:
-            current_user.last_seen = now
-            db.session.commit()
+    if 'user_id' in session and not current_user.is_authenticated:
+        session.clear()
+
+    if current_user.is_authenticated:
+        if current_user.is_blocked and request.endpoint not in {'login', 'signup', 'welcome', 'logout'}:
+            session.clear()
+            logout_user()
+            return redirect(url_for('login'))
+        if session.get('user_id') != current_user.id:
+            session['user_id'] = current_user.id
+            session['username'] = current_user.username
+            session.permanent = True
+        if request.endpoint != 'static':
+            now = datetime.utcnow()
+            if not current_user.last_seen or (now - current_user.last_seen).total_seconds() >= 30:
+                current_user.last_seen = now
+                db.session.commit()
 
 @app.context_processor
 def inject_unread_count():
@@ -625,13 +678,23 @@ def chat(friend_id):
 def handle_send_message(data):
     if not isinstance(data, dict):
         return
-    sender_id = session.get('user_id')
+    sender = active_socket_user()
+    sender_id = sender.id if sender else None
     try:
         receiver_id = int(data.get('receiver_id'))
     except (TypeError, ValueError):
         return
-    content = (data.get('content') or '').strip()[:500]
-    if not sender_id or sender_id == receiver_id or not content or not db.session.get(User, receiver_id):
+    raw_content = data.get('content')
+    if not isinstance(raw_content, str):
+        return
+    content = raw_content.strip()[:500]
+    if (
+        not sender_id
+        or sender_id == receiver_id
+        or not content
+        or not db.session.get(User, receiver_id)
+        or not are_accepted_friends(sender_id, receiver_id)
+    ):
         return
 
     new_msg = Message(sender_id=sender_id, receiver_id=receiver_id, content=content)
@@ -642,7 +705,7 @@ def handle_send_message(data):
         'content': content,
         'sender_id': sender_id,
         'receiver_id': receiver_id,
-        'sender_name': db.session.get(User, sender_id).username,
+        'sender_name': sender.username,
         'timestamp': new_msg.timestamp.strftime('%I:%M %p')
     }
     socketio.emit('receive_message', msg_data, room=f"user_{receiver_id}")
@@ -691,9 +754,8 @@ def delete_chat(friend_id):
 
 @socketio.on('connect')
 def handle_connect(auth=None):
-    user_id = session.get('user_id')
-    user = db.session.get(User, user_id) if user_id else None
-    if not user or user.is_blocked:
+    user = active_socket_user()
+    if not user:
         return False
 
     user.is_online_status = True
@@ -727,8 +789,7 @@ def handle_disconnect(reason=None):
 
 @socketio.on('presence_heartbeat')
 def handle_presence_heartbeat():
-    user_id = session.get('user_id')
-    user = db.session.get(User, user_id) if user_id else None
+    user = active_socket_user()
     if user:
         user.last_seen = datetime.utcnow()
         user.is_online_status = True
@@ -739,8 +800,9 @@ def handle_presence_heartbeat():
 def handle_invite(data):
     if not isinstance(data, dict):
         return
-    sender_id = session.get('user_id')
-    lobby_id = str(data.get('lobby_id', ''))
+    sender = active_socket_user()
+    sender_id = sender.id if sender else None
+    lobby_id = str(data.get('lobby_id', ''))[:64]
     try:
         target_id = int(data.get('target_id'))
     except (TypeError, ValueError):
@@ -751,7 +813,6 @@ def handle_invite(data):
         user_id=sender_id, friend_id=target_id, status='accepted'
     ).first()
     target = db.session.get(User, target_id)
-    sender = db.session.get(User, sender_id) if sender_id else None
     if not sender or not target or not friendship or sender_id == target_id:
         emit('invite_error', {'target_id': target_id, 'message': 'يمكن دعوة الأصدقاء فقط'})
         return
@@ -779,7 +840,14 @@ def handle_invite(data):
 def _safe_answers(raw_answers):
     if not isinstance(raw_answers, list):
         return [''] * 6
-    return [str(answer or '').strip()[:80] for answer in raw_answers[:6]] + [''] * max(0, 6 - len(raw_answers))
+    answers = []
+    for answer in raw_answers[:6]:
+        if not isinstance(answer, str):
+            answers.append('')
+            continue
+        cleaned = ''.join(char for char in answer if char.isprintable() or char.isspace())
+        answers.append(cleaned.strip()[:80])
+    return answers + [''] * max(0, 6 - len(answers))
 
 
 def _normalize_arabic(value):
@@ -791,18 +859,35 @@ def _normalize_arabic(value):
 def _score_round(players_answers, letter):
     scores = {}
     normalized_letter = _normalize_arabic(letter)
+    normalized_answers = {}
     for player_id, player_data in players_answers.items():
-        answers = player_data['answers']
+        raw_answers = player_data.get('answers', []) if isinstance(player_data, dict) else []
+        if not isinstance(raw_answers, list):
+            raw_answers = []
+        normalized_answers[player_id] = []
+        for answer in raw_answers[:6]:
+            normalized = _normalize_arabic(answer)
+            arabic_letters = [
+                char for char in normalized
+                if '\u0621' <= char <= '\u064A'
+            ]
+            valid = (
+                normalized
+                and normalized[0] == normalized_letter
+                and len(arabic_letters) >= 2
+                and len(set(arabic_letters)) >= 2
+            )
+            normalized_answers[player_id].append(normalized if valid else '')
+
+    for player_id, answers in normalized_answers.items():
         total = 0
         for category_index, answer in enumerate(answers):
-            normalized = _normalize_arabic(answer)
-            if not normalized or normalized[0] != normalized_letter:
+            if not answer:
                 continue
             duplicate_count = sum(
-                1 for other in players_answers.values()
-                if category_index < len(other['answers'])
-                and other['answers'][category_index]
-                and _normalize_arabic(other['answers'][category_index]) == normalized
+                1 for other_answers in normalized_answers.values()
+                if category_index < len(other_answers)
+                and other_answers[category_index] == answer
             )
             total += 5 if duplicate_count > 1 else 10
         scores[player_id] = total
@@ -872,18 +957,12 @@ def _game_deadline_worker(lobby_id, game_token, timer):
     _finish_round(lobby_id, game_token)
 
 
-def _early_finish_worker(lobby_id, game_token):
-    socketio.sleep(3)
-    _finish_round(lobby_id, game_token)
-
-
 @socketio.on('join_lobby')
 def handle_join_lobby(data):
     if not isinstance(data, dict):
         return
-    user_id = session.get('user_id')
-    user = db.session.get(User, user_id) if user_id else None
-    lobby_id = str(data.get('room', ''))
+    user = active_socket_user()
+    lobby_id = str(data.get('room', ''))[:64]
     if not user:
         emit('lobby_error', {'message': 'سجّل الدخول للانضمام'})
         return
@@ -931,7 +1010,8 @@ def handle_join_lobby(data):
 def handle_start_game(data):
     if not isinstance(data, dict):
         return
-    user_id = session.get('user_id')
+    user = active_socket_user()
+    user_id = user.id if user else None
     lobby_id = str(data.get('lobby_id', ''))
     try:
         timer = int(data.get('timer', 60))
@@ -971,33 +1051,38 @@ def handle_start_game(data):
 def _record_submission(data, early_finish=False):
     if not isinstance(data, dict):
         return
-    user_id = session.get('user_id')
-    lobby_id = str(data.get('lobby_id', ''))
+    user = active_socket_user()
+    user_id = user.id if user else None
+    lobby_id = str(data.get('lobby_id', ''))[:64]
     with state_lock:
         room = lobby_rooms.get(lobby_id)
         game = room.get('game') if room else None
         if not game or game['status'] != 'playing' or user_id not in game['participants']:
             return
+        now = datetime.utcnow().timestamp()
+        if user_id in game['answers']:
+            emit('player_submission_status', {
+                'submitted': len(game['answers']),
+                'total': len(game['participants'])
+            })
+            return
+        if not early_finish and not game['ending']:
+            return
+        if now > game['end_at'] + 1.5:
+            return
         game['answers'][user_id] = {
             'username': game['participants'][user_id],
             'answers': _safe_answers(data.get('answers'))
         }
-        if early_finish and not game['ending']:
-            game['ending'] = True
-            should_request_others = True
-            token = game['token']
-        else:
-            should_request_others = False
-            token = game['token']
         all_submitted = len(game['answers']) >= len(game['participants'])
+        progress = {
+            'submitted': len(game['answers']),
+            'total': len(game['participants'])
+        }
+        token = game['token']
 
-    if should_request_others:
-        socketio.emit('game_submission_requested', {'reason': 'player_finished'}, room=lobby_id)
-        if all_submitted:
-            _finish_round(lobby_id, token)
-        else:
-            socketio.start_background_task(_early_finish_worker, lobby_id, token)
-    elif all_submitted and game.get('ending'):
+    socketio.emit('player_submission_status', progress, room=lobby_id)
+    if all_submitted:
         _finish_round(lobby_id, token)
 
 
@@ -1015,8 +1100,9 @@ def handle_time_up(data):
 def handle_kick_player(data):
     if not isinstance(data, dict):
         return
-    host_id = session.get('user_id')
-    lobby_id = str(data.get('lobby_id', ''))
+    host = active_socket_user()
+    host_id = host.id if host else None
+    lobby_id = str(data.get('lobby_id', ''))[:64]
     try:
         kicked_id = int(data.get('user_id'))
     except (TypeError, ValueError):
@@ -1040,9 +1126,11 @@ def handle_kick_player(data):
 def handle_game_chat(data):
     if not isinstance(data, dict):
         return
-    user_id = session.get('user_id')
-    lobby_id = str(data.get('room', ''))
-    message = (data.get('message') or '').strip()[:300]
+    user = active_socket_user()
+    user_id = user.id if user else None
+    lobby_id = str(data.get('room', ''))[:64]
+    raw_message = data.get('message')
+    message = raw_message.strip()[:300] if isinstance(raw_message, str) else ''
     with state_lock:
         room = lobby_rooms.get(lobby_id)
         allowed = room and room['state'] == 'playing' and user_id in room['players']
@@ -1153,33 +1241,44 @@ def game_page(lobby_id):
 def handle_mark_as_read(data):
     if not isinstance(data, dict):
         return
-    user_id = session.get('user_id')
+    user = active_socket_user()
+    user_id = user.id if user else None
     try:
         friend_id = int(data.get('friend_id'))
     except (TypeError, ValueError):
         return
     if not user_id:
         return
+    has_conversation = Message.query.filter(
+        ((Message.sender_id == friend_id) & (Message.receiver_id == user_id)) |
+        ((Message.sender_id == user_id) & (Message.receiver_id == friend_id))
+    ).first()
+    if not has_conversation:
+        return
 
-    Message.query.filter_by(
+    updated_count = Message.query.filter_by(
         sender_id=friend_id,
         receiver_id=user_id,
         is_read=False
     ).update({Message.is_read: True}, synchronize_session=False)
     db.session.commit()
-    socketio.emit('messages_seen', {'seen_by': user_id}, room=f"user_{friend_id}")
+    if updated_count:
+        socketio.emit('messages_seen', {'seen_by': user_id}, room=f"user_{friend_id}")
 
 @socketio.on('typing')
 def handle_typing(data):
     if not isinstance(data, dict):
         return
     friend_id = data.get('friend_id')
-    user_id = session.get('user_id')
+    user = active_socket_user()
+    user_id = user.id if user else None
     if not user_id:
         return
     try:
         friend_id = int(friend_id)
     except (TypeError, ValueError):
+        return
+    if not are_accepted_friends(user_id, friend_id):
         return
     socketio.emit('display_typing', {
         'user_id': user_id,

@@ -32,15 +32,20 @@
             {% endif %}
 
             <form action="/change_password" method="POST" class="auth-form" style="padding: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="input-group" style="position: relative; margin-bottom: 10px;">
-                    <input type="password" id="new_password" name="new_password" placeholder="كلمة المرور الجديدة" required 
+                    <input type="password" id="current_password" name="current_password" placeholder="كلمة المرور الحالية" autocomplete="current-password" maxlength="128" required
+                           style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px; box-sizing: border-box;">
+                </div>
+                <div class="input-group" style="position: relative; margin-bottom: 10px;">
+                    <input type="password" id="new_password" name="new_password" placeholder="كلمة المرور الجديدة" autocomplete="new-password" minlength="12" maxlength="128" required 
                            style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px; padding-left: 45px; box-sizing: border-box;">
                     <i class="fas fa-eye-slash toggle-password" id="toggleNewPassword" 
                        style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.5);"></i>
                 </div>
 
                 <div class="input-group" style="position: relative; margin-bottom: 15px;">
-                    <input type="password" id="confirm_password" name="confirm_password" placeholder="تأكيد كلمة المرور" required 
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="تأكيد كلمة المرور" autocomplete="new-password" minlength="12" maxlength="128" required 
                            style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px; padding-left: 45px; box-sizing: border-box;">
                     <i class="fas fa-eye-slash toggle-password" id="toggleConfirmPassword" 
                        style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.5);"></i>
@@ -51,23 +56,27 @@
 
             <hr style="opacity: 0.1; margin: 25px 0;">
 
-            <a href="/logout" style="text-decoration: none; display: block; margin-bottom: 15px;">
-                <div class="stat-card" style="border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; background: rgba(255,255,255,0.02); transition: 0.3s;">
+            <form action="{{ url_for('logout') }}" method="POST" style="margin-bottom: 15px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="stat-card" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; background: rgba(255,255,255,0.02); transition: 0.3s; cursor: pointer; font: inherit;">
                     <p style="margin: 0; display: flex; justify-content: space-between; align-items: center; color: white;">
                         <span>تسجيل الخروج</span>
                         <i class="fas fa-sign-out-alt"></i>
                     </p>
-                </div>
-            </a>
+                </button>
+            </form>
 
-            <a href="javascript:void(0)" onclick="confirmDelete()" style="text-decoration: none; display: block; margin-bottom: 25px;">
+            <form id="deleteAccountForm" action="{{ url_for('delete_account') }}" method="POST" hidden>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            </form>
+            <button type="button" onclick="confirmDelete()" style="width: 100%; border: 0; text-align: right; font: inherit; cursor: pointer; text-decoration: none; display: block; margin-bottom: 25px; background: transparent; padding: 0;">
                 <div class="stat-card" style="border: 1px solid #ff7675; background: rgba(255, 118, 117, 0.1); padding: 15px; border-radius: 10px; transition: 0.3s;">
                     <p style="color: #ff7675; margin: 0; display: flex; justify-content: space-between; align-items: center;">
                         <span>حذف الحساب نهائياً</span>
                         <i class="fas fa-trash-alt"></i>
                     </p>
                 </div>
-            </a>
+            </button>
 
             <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
                 <a href="/dashboard" class="back-link" style="color: #a29bfe; text-decoration: none; border: 1px solid #a29bfe; padding: 10px 25px; border-radius: 10px; display: inline-block; transition: 0.3s;">
@@ -81,7 +90,7 @@
     // دالة تأكيد حذف الحساب
     function confirmDelete() {
         if (confirm("هل أنت متأكد من حذف حسابك نهائياً؟ لا يمكن التراجع عن هذا الإجراء!")) {
-            window.location.href = "/delete_account";
+            document.getElementById("deleteAccountForm").requestSubmit();
         }
     }
 

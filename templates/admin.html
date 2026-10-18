@@ -18,7 +18,7 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <h2>أهلاً يا أدمن {{ admin_name }}</h2>
+        <h2>أهلاً يا أدمن {{ user.username }}</h2>
 
         <div class="stat-card" style="background: rgba(108, 92, 231, 0.2); border: 1px solid #6c5ce7;">
             <h3><i class="fas fa-users"></i> المستخدمين المسجلين</h3>
@@ -49,10 +49,14 @@
                         </span>
                     </td>
                     <td>
-                        <a href="/toggle_block/{{ u.id }}" class="btn-action btn-block">
-                            {{ "فك الحظر" if u.is_blocked else "حظر" }}
-                        </a>
-                        <a href="/admin_delete_user/{{ u.id }}" class="btn-action btn-delete" onclick="return confirm('حذف نهائي؟')">حذف</a>
+                        <form action="/toggle_block/{{ u.id }}" method="POST" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-action btn-block">{{ "فك الحظر" if u.is_blocked else "حظر" }}</button>
+                        </form>
+                        <form action="/admin_delete_user/{{ u.id }}" method="POST" style="display:inline" onsubmit="return confirm('حذف نهائي؟')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-action btn-delete">حذف</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}

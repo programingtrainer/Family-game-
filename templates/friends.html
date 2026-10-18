@@ -30,6 +30,7 @@
         {% endwith %}
 
         <form action="/friends" method="POST" class="auth-form" style="margin-bottom: 20px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="input-group">
                 <i class="fas fa-search icon"></i>
                 <input type="text" name="search_query" placeholder="ابحث عن اسم صديق..." required>
@@ -46,7 +47,10 @@
                     <span id="search-dot-{{ u.id }}" style="height: 10px; width: 10px; border-radius: 50%; background-color: {{ '#2ed573' if u.is_online else '#ff4757' }};"></span>
                     <a href="/profile/{{ u.id }}" style="color: white; text-decoration: none; font-weight: bold;">{{ u.username }}</a>
                 </div>
-                <a href="/add_friend/{{ u.id }}" class="btn" style="padding: 5px 15px; font-size: 0.8rem; background: #2ed573; text-decoration: none; border-radius: 5px; color: white;">إضافة</a>
+                <form action="/add_friend/{{ u.id }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn" style="padding: 5px 15px; font-size: 0.8rem; background: #2ed573; border: 0; border-radius: 5px; color: white; cursor: pointer;">إضافة</button>
+                </form>
             </div>
             {% endfor %}
         </div>
@@ -100,6 +104,19 @@
     <script src="{{ url_for('static', filename='presence.js') }}"></script>
     <script>
         const socket = window.familyPresenceSocket || io();
+        const csrfToken = {{ csrf_token()|tojson }};
+        function postAction(path) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = path;
+            const token = document.createElement('input');
+            token.type = 'hidden';
+            token.name = 'csrf_token';
+            token.value = csrfToken;
+            form.appendChild(token);
+            document.body.appendChild(form);
+            form.submit();
+        }
         socket.on('friend_request', function(data) {
             const notice = document.getElementById('friendLiveNotice');
             if (!notice) return;
@@ -128,12 +145,12 @@
         });
 
         function sendChallenge(friendId) {
-            window.location.assign(`/challenge/${encodeURIComponent(friendId)}`);
+            postAction(`/challenge/${encodeURIComponent(friendId)}`);
         }
 
         socket.on('receive_invite', function(data) {
             if (confirm(`${data.sender_name} يدعوك للعب. هل تريد الانضمام؟`)) {
-                window.location.href = `/join_lobby/${encodeURIComponent(data.lobby_id)}`;
+                postAction(`/join_lobby/${encodeURIComponent(data.lobby_id)}`);
             }
         });
     </script>

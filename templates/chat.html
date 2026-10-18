@@ -45,9 +45,12 @@
                 </div>
                 <span style="color: white;">{{ friend.username }}</span>
             </div>
-            <a href="/delete_chat/{{ friend.id }}" style="color: #ff4757; text-decoration: none; font-size: 0.8rem;" onclick="return confirm('هل أنت متأكد؟')">
-                <i class="fas fa-trash-alt"></i>
-            </a>
+            <form action="/delete_chat/{{ friend.id }}" method="POST" onsubmit="return confirm('هل أنت متأكد؟')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" aria-label="حذف المحادثة" style="border:0;background:transparent;color:#ff4757;cursor:pointer;font-size:.8rem;">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </form>
         </div>
 
         <div class="chat-box" id="chatBox">
@@ -56,7 +59,10 @@
                     {% if msg.sender_id == session['user_id'] %}
                     <div class="msg-actions">
                         <a href="#" onclick="editMsg('{{ msg.id }}'); return false;"><i class="fas fa-edit"></i></a>
-                        <a href="/delete_message/{{ msg.id }}" class="delete-btn"><i class="fas fa-trash"></i></a>
+                        <form action="/delete_message/{{ msg.id }}" method="POST" onsubmit="return confirm('حذف الرسالة؟')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="delete-btn" aria-label="حذف الرسالة"><i class="fas fa-trash"></i></button>
+                        </form>
                     </div>
                     {% endif %}
 
@@ -92,6 +98,7 @@
         var currentUserId = {{ session['user_id']|tojson }};
         var friendId = {{ friend.id|tojson }};
         var friendUsername = {{ friend.username|tojson }};
+        var csrfToken = {{ csrf_token()|tojson }};
 
         // أول ما الصفحة تفتح، بنزل السكرول لتحت خالص
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -196,7 +203,10 @@
             if (updated === null || !updated.trim()) return;
             fetch(`/edit_message/${encodeURIComponent(messageId)}`, {
                 method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                    "X-CSRFToken": csrfToken
+                },
                 body: new URLSearchParams({ content: updated.trim() })
             }).then((response) => {
                 if (response.ok) original.textContent = `${updated.trim()} (معدلة)`;

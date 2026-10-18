@@ -204,7 +204,7 @@
                     <div class="input-group"><label for="val-4"><span class="category-icon"><i class="fa-solid fa-seedling" aria-hidden="true"></i></span>نبات</label><input class="game-input" id="val-4" type="text" autocomplete="off" placeholder="إجابة تبدأ بالحرف"></div>
                     <div class="input-group"><label for="val-5"><span class="category-icon"><i class="fa-solid fa-earth-africa" aria-hidden="true"></i></span>بلاد</label><input class="game-input" id="val-5" type="text" autocomplete="off" placeholder="إجابة تبدأ بالحرف"></div>
                     <div class="input-group"><label for="val-6"><span class="category-icon"><i class="fa-solid fa-cube" aria-hidden="true"></i></span>جماد</label><input class="game-input" id="val-6" type="text" autocomplete="off" placeholder="إجابة تبدأ بالحرف"></div>
-                    <button class="stop-btn" id="stopBtn" type="button"><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i><span>خلصت، وقف الجولة</span></button>
+                    <button class="stop-btn" id="stopBtn" type="button"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i><span>أرسل إجاباتي</span></button>
                 </div>
                 <div class="game-status" id="gameStatus" role="status" aria-live="polite"></div>
             </section>
@@ -311,7 +311,7 @@
                     if (timeLeft <= 0) submitAnswers("انتهى الوقت، اتسجلت إجاباتك.");
                 }, 1000);
             }
-            stopButton.addEventListener("click", () => submitAnswers("إجاباتك اتسجلت. مستنيين باقي اللاعبين."));
+            stopButton.addEventListener("click", () => submitAnswers("تم إرسال إجاباتك. الجولة مستمرة حتى ينتهي الجميع أو ينتهي الوقت."));
             socket.on("connect", () => {
                 socket.emit("join_lobby", { room: lobbyId });
                 if (submittedAnswers && !resultsReceived) {
@@ -325,8 +325,14 @@
             socket.on("connect", () => {
                 if (!gameEnded) gameStatus.classList.remove("visible");
             });
-            socket.on("stop_game_for_all", () => submitAnswers("الجولة وقفت. إجاباتك اتبعتت."));
-            socket.on("game_submission_requested", () => submitAnswers("الجولة وقفت. إجاباتك اتبعتت."));
+            socket.on("game_submission_requested", () => submitAnswers("انتهى الوقت. تم إرسال إجاباتك، انتظر إعلان النتيجة."));
+            socket.on("player_submission_status", (data) => {
+                if (!data || resultsReceived) return;
+                gameStatus.textContent = submitted
+                    ? `تم إرسال إجاباتك. ${data.submitted} من ${data.total} لاعبين سجّلوا إجاباتهم.`
+                    : `${data.submitted} من ${data.total} لاعبين سجّلوا إجاباتهم. الجولة مستمرة.`;
+                gameStatus.classList.add("visible");
+            });
             socket.on("show_results", (data) => showResults(data && data.leaderboard));
 
             function addChatMessage(data) {
