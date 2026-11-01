@@ -111,8 +111,11 @@ def protect_unsafe_requests():
 @app.after_request
 def add_security_headers(response):
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'DENY')
     response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
     response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+    response.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
+    response.headers.setdefault('Cross-Origin-Resource-Policy', 'same-origin')
     if request.endpoint in {'login', 'signup'}:
         response.headers['Cache-Control'] = 'no-store'
     if (
@@ -254,9 +257,11 @@ def friends():
     user = db.session.get(User, session['user_id'])
     search_results = []
     if request.method == 'POST':
-        query = request.form.get('search_query')
-        stmt = select(User).where(User.username.like(f'%{query}%'), User.id != user.id)
-        search_results = db.session.execute(stmt).scalars().all()
+        query = str(request.form.get('search_query') or '').strip()[:80]
+        if query:
+            escaped_query = query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+            stmt = select(User).where(User.username.ilike(f'%{escaped_query}%', escape='\\'), User.id != user.id)
+            search_results = db.session.execute(stmt).scalars().all()
 
     friend_conns = Friend.query.filter_by(user_id=user.id, status='accepted').all()
     my_friends = [db.session.get(User, f.friend_id) for f in friend_conns if db.session.get(User, f.friend_id)]
@@ -320,6 +325,8 @@ def signup():
 
         if not 3 <= len(user_name) <= 80:
             return render_template('signup.html', error='اسم المستخدم لازم يكون بين 3 و80 حرفاً'), 400
+        if user_name.casefold() in {name.strip().casefold() for name in os.environ.get('ADMIN_USERNAMES', 'gatapro901').split(',') if name.strip()}:
+            return render_template('signup.html', error='اسم المستخدم محفوظ للإدارة'), 409
         if not 12 <= len(pass_word) <= 128:
             return render_template('signup.html', error='كلمة المرور لازم تكون بين 12 و128 حرفاً'), 400
         if pass_word != confirm_pwd:
@@ -598,7 +605,7 @@ def profile(user_id):
     if not target_user: return "المستخدم غير موجود", 404
 
     # التأكد من أنهما أصدقاء لرؤية البيانات الحساسة
-    is_friend = Friend.query.filter_by(user_id=session['user_id'], friend_id=user_id, status='accepted').first()
+    is_friend = are_accepted_friends(session['user_id'], user_id)
 
     return render_template('profile.html', target=target_user, is_friend=is_friend)
 
@@ -660,7 +667,10 @@ def inbox():
 def chat(friend_id):
     if 'user_id' not in session: return redirect('/login')
 
+    user_id = session['user_id']
     friend = db.session.get(User, friend_id)
+    if not friend or not are_accepted_friends(user_id, friend_id):
+        abort(403)
     # جلب الرسايل بين الطرفين بالترتيب
     messages = Message.query.filter(
         ((Message.sender_id == session['user_id']) & (Message.receiver_id == friend_id)) |
@@ -856,6 +866,21 @@ def _normalize_arabic(value):
     return value.translate(str.maketrans({'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ٱ': 'ا'}))
 
 
+def _valid_answer(answer, letter):
+    normalized = _normalize_arabic(answer)
+    normalized_letter = _normalize_arabic(letter)
+    arabic_letters = [char for char in normalized if '\u0621' <= char <= '\u064A']
+    if not normalized or not normalized_letter or normalized[0] != normalized_letter:
+        return False
+    if len(arabic_letters) < 3 or len(set(arabic_letters)) < 2:
+        return False
+    if len(normalized) > 80 or any(not ('\u0621' <= char <= '\u064A' or char.isspace()) for char in normalized):
+        return False
+    if any(arabic_letters[index] == arabic_letters[index + 1] == arabic_letters[index + 2] for index in range(len(arabic_letters) - 2)):
+        return False
+    return True
+
+
 def _score_round(players_answers, letter):
     scores = {}
     normalized_letter = _normalize_arabic(letter)
@@ -867,16 +892,7 @@ def _score_round(players_answers, letter):
         normalized_answers[player_id] = []
         for answer in raw_answers[:6]:
             normalized = _normalize_arabic(answer)
-            arabic_letters = [
-                char for char in normalized
-                if '\u0621' <= char <= '\u064A'
-            ]
-            valid = (
-                normalized
-                and normalized[0] == normalized_letter
-                and len(arabic_letters) >= 2
-                and len(set(arabic_letters)) >= 2
-            )
+            valid = _valid_answer(answer, normalized_letter)
             normalized_answers[player_id].append(normalized if valid else '')
 
     for player_id, answers in normalized_answers.items():
@@ -1070,9 +1086,16 @@ def _record_submission(data, early_finish=False):
             return
         if now > game['end_at'] + 1.5:
             return
+        answers = _safe_answers(data.get('answers'))
+        valid_answers = sum(1 for answer in answers if _valid_answer(answer, game['letter']))
+        if valid_answers != 6:
+            emit('submission_rejected', {
+                'message': 'لازم تكمل الإجابات الستة بكلمات تبدأ بالحرف وبحروف عربية صحيحة.'
+            })
+            return
         game['answers'][user_id] = {
             'username': game['participants'][user_id],
-            'answers': _safe_answers(data.get('answers'))
+            'answers': answers
         }
         all_submitted = len(game['answers']) >= len(game['participants'])
         progress = {

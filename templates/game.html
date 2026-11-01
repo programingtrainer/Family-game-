@@ -290,12 +290,22 @@
                 gameStatus.textContent = message;
                 gameStatus.classList.add("visible");
             }
+            function updateSubmitState() {
+                stopButton.disabled = fields.some((input) => input.value.trim().length === 0);
+            }
+            fields.forEach((input) => input.addEventListener("input", updateSubmitState));
             function submitAnswers(message) {
                 if (submitted) return;
+                const answers = fields.map((input) => input.value.trim());
+                if (answers.some((answer) => answer.length === 0)) {
+                    gameStatus.textContent = "لازم تملى كل الخانات الستة قبل الإرسال.";
+                    gameStatus.classList.add("visible");
+                    return;
+                }
                 submitted = true;
                 gameEnded = true;
                 window.clearInterval(timerId);
-                submittedAnswers = fields.map((input) => input.value.trim());
+                submittedAnswers = answers;
                 lockInputs(message);
                 socket.emit("player_finished", { lobby_id: lobbyId, answers: submittedAnswers });
             }
@@ -332,6 +342,17 @@
                     ? `تم إرسال إجاباتك. ${data.submitted} من ${data.total} لاعبين سجّلوا إجاباتهم.`
                     : `${data.submitted} من ${data.total} لاعبين سجّلوا إجاباتهم. الجولة مستمرة.`;
                 gameStatus.classList.add("visible");
+            });
+            socket.on("submission_rejected", (data) => {
+                submitted = false;
+                submittedAnswers = null;
+                gameEnded = false;
+                fields.forEach((input) => { input.disabled = false; });
+                stopButton.disabled = false;
+                gameStatus.textContent = (data && data.message) || "الإجابات غير صالحة. راجع الخانات وحاول مرة أخرى.";
+                gameStatus.classList.add("visible");
+                updateSubmitState();
+                if (timeLeft > 0) startTimer();
             });
             socket.on("show_results", (data) => showResults(data && data.leaderboard));
 
@@ -413,6 +434,7 @@
                     }
                 }, 1000);
             }
+            updateSubmitState();
             startTimer();
         })();
     </script>
